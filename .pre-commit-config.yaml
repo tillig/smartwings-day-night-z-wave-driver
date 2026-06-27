@@ -1,0 +1,21 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
+    hooks:
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: "a4d5d37e66ebcd6b3705204a1d6dbb56dea66338"  # frozen: v0.49.0
+    hooks:
+      - id: markdownlint
+        args:
+          - --fix
+  - repo: https://github.com/tillig/json-sort-cli
+    rev: 2b7e147e0933bd30b58133b6f287e5c695ff4f0e # frozen: v3.0.1
+    hooks:
+      - id: json-sort
+        args:
+          - --autofix
