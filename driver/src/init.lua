@@ -53,19 +53,18 @@ local log = require "log"
 -- Constants
 --------------------------------------------------------------------------------
 
-local BOTTOM_COMPONENT = "main"   -- bottom rail, Z-Wave endpoint 1
-local SHEER_COMPONENT = "sheer"   -- middle rail, Z-Wave endpoint 2
-local SCENE_COMPONENT = "scene"   -- day/night scene picker + apply button (no endpoint)
+local BOTTOM_COMPONENT = "main"   -- bottom rail, Z-Wave endpoint 1 (a real UI component)
+-- "sheer" is a Z-Wave ROUTING KEY for the middle rail (endpoint 2), used with
+-- send_to_component / the endpoint map. It is NOT a UI component on this device:
+-- the middle rail is surfaced only through the child "Sheer" device, so the sheer
+-- never appears twice. Do not emit display events to this key on the parent.
+local SHEER_COMPONENT = "sheer"
+local SCENE_COMPONENT = "scene"   -- day/night scene picker + buttons (no endpoint)
 local BOTTOM_EP = 1
 local MIDDLE_EP = 2
 
 -- Custom stateless "apply selected scene" button capability.
 local ACTIVATE_SCENE_CAP = "happyvessel61954.activateScene"
--- Custom "sheer amount" 0-100 slider capability for the middle rail. We use a
--- custom capability (not the stock windowShade/windowShadeLevel) because the
--- inverted sheer semantics conflict with the platform's windowShade<->level
--- linkage, which left the stock level attribute wedged.
-local SHEER_LEVEL_CAP = "happyvessel61954.sheerLevel"
 -- Custom stateless "save current position as Favorite" button capability.
 local SAVE_FAVORITE_CAP = "happyvessel61954.saveFavorite"
 
@@ -151,32 +150,19 @@ local function get_bottom(device)
   return v
 end
 
--- Emit the display state for a rail height to its component. The bottom rail is
--- shown straight (level = height); the sheer component is shown inverted
--- (sheer% = 100 - middle height).
---
--- Order matters: emit windowShade (the openable enum) FIRST, then windowShadeLevel.
--- The platform links these two capabilities and can auto-derive a shadeLevel from
--- an open/closed enum; emitting the explicit level LAST ensures our value wins.
-local function emit_rail(device, component, height)
-  local comp = device.profile.components[component]
-  if component == SHEER_COMPONENT then
-    -- Inverted: sheer% = 100 - middle height. Custom capability, no platform
-    -- windowShade linkage to fight.
-    device:emit_component_event(comp,
-      capabilities[SHEER_LEVEL_CAP].sheerLevel(100 - height))
-  else
-    -- Bottom rail: ordinary window shade, shown straight.
-    local attr = capabilities.windowShade.windowShade
-    local state = attr.partially_open()
-    if height >= 100 then
-      state = attr.open()
-    elseif height <= 0 then
-      state = attr.closed()
-    end
-    device:emit_component_event(comp, state)
-    device:emit_component_event(comp, capabilities.windowShadeLevel.shadeLevel(height))
+-- Emit the bottom rail's display state to the "main" window-shade component.
+-- (The middle rail has no parent UI component; it is shown via the child device.)
+local function emit_bottom(device, height)
+  local comp = device.profile.components[BOTTOM_COMPONENT]
+  local attr = capabilities.windowShade.windowShade
+  local state = attr.partially_open()
+  if height >= 100 then
+    state = attr.open()
+  elseif height <= 0 then
+    state = attr.closed()
   end
+  device:emit_component_event(comp, state)
+  device:emit_component_event(comp, capabilities.windowShadeLevel.shadeLevel(height))
 end
 
 --------------------------------------------------------------------------------
@@ -326,15 +312,11 @@ local function bottom_close(driver, device, command)
 end
 
 -- Set the sheer amount (0-100) on a given PARENT device: middle = 100 - sheer,
--- clamped so the middle rail never drops below the bottom rail.
+-- clamped so the middle rail never drops below the bottom rail. Driven by the
+-- child "Sheer" device's commands.
 local function set_sheer(parent, sheer)
   sheer = math.max(0, math.min(100, sheer))
   move_to(parent, 100 - sheer, get_bottom(parent))
-end
-
--- sheer: "how much is sheer" on the middle rail (parent's custom slider).
-local function sheer_set_level(driver, device, command)
-  set_sheer(device, command.args.sheerLevel or 0)
 end
 
 local function pause(driver, device, command)
@@ -421,11 +403,10 @@ local function switch_multilevel_report(driver, device, cmd)
 
   if endpoint == MIDDLE_EP then
     device:set_field(FIELD_MIDDLE, height)
-    emit_rail(device, SHEER_COMPONENT, height)
-    sync_sheer_child(device, height) -- keep the child "Sheer" blind in sync
+    sync_sheer_child(device, height) -- the middle rail is shown only on the child "Sheer" device
   else
     device:set_field(FIELD_BOTTOM, height)
-    emit_rail(device, BOTTOM_COMPONENT, height)
+    emit_bottom(device, height)
   end
 
   device:emit_component_event(device.profile.components[SCENE_COMPONENT],
@@ -498,9 +479,6 @@ local driver_template = {
     },
     [ACTIVATE_SCENE_CAP] = {
       ["activate"] = activate_scene,
-    },
-    [SHEER_LEVEL_CAP] = {
-      ["setSheerLevel"] = sheer_set_level,
     },
     [SAVE_FAVORITE_CAP] = {
       ["save"] = save_favorite,
