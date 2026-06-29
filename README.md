@@ -7,7 +7,7 @@ A SmartThings Edge driver (Lua, runs on the hub) for [SmartWings day/night cellu
 - [How It Works](#how-it-works)
 - [What You See in the App](#what-you-see-in-the-app)
   - [Scene Modes](#scene-modes)
-  - [Why the Shade and Sheer Controls Look Different](#why-the-shade-and-sheer-controls-look-different)
+  - [Why the Sheer Is a Separate Device](#why-the-sheer-is-a-separate-device)
 - [Voice Control (Google Home)](#voice-control-google-home)
 - [Install](#install)
   - [Prerequisites](#prerequisites)
@@ -40,14 +40,18 @@ The two motors share one Z-Wave node (two multichannel endpoints). The stock dri
 
 ## What You See in the App
 
-The device detail screen has four sections, in order:
+Each shade shows up as **two devices**:
 
-| Section     | What it is                                  | What it controls                                                        |
-| ----------- | ------------------------------------------- | ----------------------------------------------------------------------- |
-| **Sheer**   | Slider (0–100%)                             | Middle rail. 0% = no sheer (middle up), 100% = full sheer (middle down) |
-| **Shade**   | Window shade tile with Open/Close/Pause + % | Bottom rail. 0% = closed/covered, 100% = open/see-through               |
-| **Scene**   | Mode dropdown + buttons                     | Preset positions for both rails at once                                 |
-| **Battery** | Battery level                               | —                                                                       |
+**The main shade** (e.g. "Family Room Shade") controls the opaque/bottom rail and the day/night scenes:
+
+| Section     | What it is                                  | What it controls                                          |
+| ----------- | ------------------------------------------- | --------------------------------------------------------- |
+| **Shade**   | Window shade tile with Open/Close/Pause + % | Bottom rail. 0% = closed/covered, 100% = open/see-through |
+| **Scene**   | Mode dropdown + Apply button                | One-tap preset positions for both rails (see below)       |
+| **Favorite**| Save (gear) + Go button + readout           | Saves and recalls a full both-rail position you like      |
+| **Battery** | Battery level                               | —                                                         |
+
+**The sheer device** (e.g. "Family Room Shade Sheer") controls the sheer/middle rail as its own shade: open = full sheer, close = no sheer, or set a percentage. It lives as a separate device so it works by voice — see [Why the sheer is a separate device](#why-the-sheer-is-a-separate-device).
 
 ### Scene Modes
 
@@ -56,15 +60,14 @@ The device detail screen has four sections, in order:
 | **Blackout** | Middle up, bottom down — maximum privacy    |
 | **Sheer**    | Both rails down — full sheer fabric visible |
 | **Open**     | Both rails up — fully open, see-through     |
-| **Favorite** | Your saved position                         |
 
 **Apply selected mode** re-fires the currently selected mode. This matters because the dropdown is stateful — re-selecting an already-selected mode won't re-trigger it; the button always fires.
 
-**Save current as Favorite** captures wherever both rails are right now.
+**Favorite**: tap the gear to save wherever both rails are right now, then the Go button restores that look in one tap.
 
-### Why the Shade and Sheer Controls Look Different
+### Why the Sheer Is a Separate Device
 
-You'll notice the **Shade** control (with Open/Close buttons and a percentage bar) looks different from the clean **Sheer** slider. That's on purpose: the Shade control is built the specific way that lets Google Home and Alexa recognize it as a real blind, so voice commands like "open the blinds" or "set the blinds to 50%" work. Making the two look identical would break that. It's a small cosmetic quirk in exchange for working voice control. (For the technical details, see [CONTRIBUTING.md](./CONTRIBUTING.md).)
+The sheer is its own device (rather than another slider on the main shade) so that voice assistants can control it — "open the sheer", "set the sheer to 50%". Google Home and Alexa only recognize standard blind controls, and giving the sheer its own standard shade device is what makes voice work. (For the technical details, see [CONTRIBUTING.md](./CONTRIBUTING.md).)
 
 ## Voice Control (Google Home)
 
@@ -109,17 +112,14 @@ It remembers your channel after the first run, so upgrades are a single command 
 
 ### Option B — Manual Install
 
-1. Create the three custom capabilities from `driver/capabilities/`:
+1. Create the custom capabilities from `driver/capabilities/`:
 
    ```powershell
    smartthings capabilities:create -i driver/capabilities/activateScene.capability.json
    smartthings capabilities:presentation:create <id> -i driver/capabilities/activateScene.presentation.json
 
-   smartthings capabilities:create -i driver/capabilities/sheerLevel.capability.json
-   smartthings capabilities:presentation:create <id> -i driver/capabilities/sheerLevel.presentation.json
-
-   smartthings capabilities:create -i driver/capabilities/saveFavorite.capability.json
-   smartthings capabilities:presentation:create <id> -i driver/capabilities/saveFavorite.presentation.json
+   smartthings capabilities:create -i driver/capabilities/dayNightFavorite.capability.json
+   smartthings capabilities:presentation:create <id> -i driver/capabilities/dayNightFavorite.presentation.json
    ```
 
 2. Note the assigned capability IDs (they'll have your account namespace prefix, e.g. `yournamespace.activateScene`). Update the namespace prefix in `driver/profiles/*.yml` and `driver/src/init.lua` if it differs from `happyvessel61954.` — see [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
@@ -153,8 +153,8 @@ SmartThings custom capability IDs embed a per-account namespace prefix (e.g. `ha
 **The app shows a GUID as the driver developer name.**
 That is a SmartThings platform limitation — it shows the account GUID, not a human name. There is no way to change it from within the driver package.
 
-**The two Shade/Sheer controls look different from each other.**
-This is intentional. See [Why the Shade and Sheer Controls Look Different](#why-the-shade-and-sheer-controls-look-different).
+**Why is the sheer a separate device instead of a control on the main shade?**
+So it works by voice. See [Why the Sheer Is a Separate Device](#why-the-sheer-is-a-separate-device).
 
 ## History
 

@@ -9,9 +9,8 @@
     presentations to your SmartThings account using the SmartThings CLI.
 
     Capabilities created:
-      - <namespace>.activateScene   (stateless button: apply selected scene)
-      - <namespace>.sheerLevel      (0-100 slider for the middle/sheer rail)
-      - <namespace>.saveFavorite    (stateless button: save current position)
+      - <namespace>.activateScene     (stateless button: apply selected scene)
+      - <namespace>.dayNightFavorite  (save + recall a both-rail favorite)
 
     The capability namespace is assigned by SmartThings per account. The driver
     source (driver/profiles/*.yml and driver/src/init.lua) currently references
@@ -224,19 +223,14 @@ function New-Capability {
 ###############################################################################
 
 $activateSceneId = New-Capability `
-    -CapabilityJsonPath (Join-Path $capDir 'activateScene.capability.json') `
-    -PresentationJsonPath (Join-Path $capDir 'activateScene.presentation.json') `
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'activateScene.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'activateScene.presentation.json') `
     -FriendlyName 'activateScene'
 
-$sheerLevelId = New-Capability `
-    -CapabilityJsonPath (Join-Path $capDir 'sheerLevel.capability.json') `
-    -PresentationJsonPath (Join-Path $capDir 'sheerLevel.presentation.json') `
-    -FriendlyName 'sheerLevel'
-
-$saveFavoriteId = New-Capability `
-    -CapabilityJsonPath (Join-Path $capDir 'saveFavorite.capability.json') `
-    -PresentationJsonPath (Join-Path $capDir 'saveFavorite.presentation.json') `
-    -FriendlyName 'saveFavorite'
+$favoriteId = New-Capability `
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightFavorite.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightFavorite.presentation.json') `
+    -FriendlyName 'dayNightFavorite'
 
 ###############################################################################
 # Namespace check: warn if the account namespace != what the driver hardcodes
@@ -246,7 +240,7 @@ Write-Host "`n=== Namespace Verification ===" -ForegroundColor Cyan
 
 # Extract the namespace portion from any of the returned IDs (format: namespace.name).
 $detectedNamespace = $null
-foreach ($id in @($activateSceneId, $sheerLevelId, $saveFavoriteId)) {
+foreach ($id in @($activateSceneId, $favoriteId)) {
     if ($id -and $id -match '^([^.]+)\.') {
         $detectedNamespace = $Matches[1]
         break
@@ -304,9 +298,8 @@ Files to update (search/replace '$knownNamespace' -> '$detectedNamespace'):
 ###############################################################################
 
 Write-Host "`n=== Summary ===" -ForegroundColor Cyan
-Write-Host "  activateScene ID : $activateSceneId"
-Write-Host "  sheerLevel ID    : $sheerLevelId"
-Write-Host "  saveFavorite ID  : $saveFavoriteId"
+Write-Host "  activateScene ID    : $activateSceneId"
+Write-Host "  dayNightFavorite ID : $favoriteId"
 Write-Host ''
 Write-Host 'Capabilities step complete.' -ForegroundColor Green
 Write-Host 'Next: run ./Deploy-Driver.ps1 (or ./Initialize-Driver.ps1) to package and install the driver.' -ForegroundColor Cyan

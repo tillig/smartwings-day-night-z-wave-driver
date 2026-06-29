@@ -10,7 +10,8 @@ components:
   #
   # "main" reads as an ordinary window shade for Google Home / voice:
   #   open  = bottom rail up (see out)      close = bottom rail down (covered)
-  # "scene" holds the day/night scene picker + apply + save-favorite buttons.
+  # "scene" holds the day/night scene picker + apply button.
+  # "favorite" holds the save/recall of a full both-rail position.
   #
   # The MIDDLE rail (sheer) is NOT a component here. It is exposed only via the
   # separate child "Sheer" device (profile smartwings-sheer) so it appears once,
@@ -35,7 +36,12 @@ components:
         version: 1
       - id: happyvessel61954.activateScene
         version: 1
-      - id: happyvessel61954.saveFavorite
+    categories:
+      - name: Blind
+  - id: favorite
+    label: Favorite
+    capabilities:
+      - id: happyvessel61954.dayNightFavorite
         version: 1
     categories:
       - name: Blind

@@ -47,7 +47,7 @@ channel after the first run, so routine upgrades take no arguments:
 | Script | What It Does |
 | --- | --- |
 | `Initialize-Driver.ps1` | First-time orchestrator: runs `New-Capabilities.ps1` then `Deploy-Driver.ps1`. |
-| `New-Capabilities.ps1` | Creates (or verifies) the three custom capabilities and presentations. Warns if your account namespace differs from the one hardcoded in the driver. |
+| `New-Capabilities.ps1` | Creates (or verifies) the custom capabilities and presentations. Warns if your account namespace differs from the one hardcoded in the driver. |
 | `Deploy-Driver.ps1` | Packages and assigns the driver for both first install and upgrades. Resolves the channel (explicit `-ChannelId`, cached, by `-ChannelName`, or `-CreateChannel`), and installs on a hub when `-HubId` is given. |
 
 All scripts accept `-Verbose`. Run `Get-Help ./setup/<script>.ps1 -Detailed` for

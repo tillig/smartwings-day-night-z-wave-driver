@@ -13,10 +13,24 @@
   },
   "detailView": [
     {
+      "displayType": "state",
+      "label": "Favorite",
+      "state": {
+        "label": "{{favorite.value}}"
+      }
+    },
+    {
       "displayType": "pushButton",
       "label": "Save current as Favorite",
       "pushButton": {
         "command": "save"
+      }
+    },
+    {
+      "displayType": "pushButton",
+      "label": "Go to Favorite",
+      "pushButton": {
+        "command": "recall"
       }
     }
   ]

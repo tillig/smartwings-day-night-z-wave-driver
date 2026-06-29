@@ -1,0 +1,34 @@
+{
+  "attributes": {
+    "favorite": {
+      "enumCommands": [
+      ],
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "commands": {
+    "recall": {
+      "arguments": [
+      ],
+      "name": "recall"
+    },
+    "save": {
+      "arguments": [
+      ],
+      "name": "save"
+    }
+  },
+  "name": "Day Night Favorite",
+  "status": "proposed"
+}

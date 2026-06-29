@@ -7,7 +7,7 @@
 - [How Distribution Works](#how-distribution-works)
 - [Scenes and State](#scenes-and-state)
 - [Child "Sheer" Device](#child-sheer-device)
-- [Why the Shade and Sheer Controls Look Different](#why-the-shade-and-sheer-controls-look-different)
+- [Why the Sheer Is a Separate Device](#why-the-sheer-is-a-separate-device)
 - [Z-Wave Details](#z-wave-details)
 
 ## Repo Layout
@@ -35,22 +35,21 @@ The `FIELD_MIDDLE` / `FIELD_BOTTOM` device fields are the single source of truth
 
 ## Custom Capabilities
 
-The driver uses three custom capabilities, which live in the SmartThings account (not in the driver package):
+The driver uses two custom capabilities, which live in the SmartThings account (not in the driver package):
 
 | Capability | ID | Purpose |
 | --- | --- | --- |
-| Sheer Level | `<namespace>.sheerLevel` | 0–100% slider for the middle rail |
 | Activate Scene | `<namespace>.activateScene` | Stateless "Apply selected mode" push button |
-| Save Favorite | `<namespace>.saveFavorite` | Stateless "Save current as Favorite" push button |
+| Day Night Favorite | `<namespace>.dayNightFavorite` | Save (gear) and recall (button) a full both-rail favorite position, with a readout of the saved value |
 
-Create them with the CLI (or `setup/New-Capabilities.ps1`, which does all three):
+Create them with the CLI (or `setup/New-Capabilities.ps1`, which does all of them):
 
 ```powershell
 smartthings capabilities:create -i driver/capabilities/<name>.capability.json
 smartthings capabilities:presentation:create <capabilityId> -i driver/capabilities/<name>.presentation.json
 ```
 
-The resulting ID takes the form `<accountNamespace>.<name>` (e.g. `happyvessel61954.sheerLevel`). The namespace is assigned per SmartThings account, and `driver/profiles/smartwings-daynight.yml` and `driver/src/init.lua` hardcode the prefix `happyvessel61954.`. **To run this on a different account**, find your namespace (`smartthings capabilities:namespaces`), then find-and-replace `happyvessel61954.` with it in those two files before packaging.
+The resulting ID takes the form `<accountNamespace>.<name>` (e.g. `happyvessel61954.activateScene`). The namespace is assigned per SmartThings account, and `driver/profiles/smartwings-daynight.yml` and `driver/src/init.lua` hardcode the prefix `happyvessel61954.`. **To run this on a different account**, find your namespace (`smartthings capabilities:namespaces`), then find-and-replace `happyvessel61954.` with it in those two files before packaging.
 
 ## Development Workflow
 
@@ -97,22 +96,23 @@ Scenes are stored as rail heights `{middle, bottom}`:
 | Blackout | 100 | 0 |
 | Sheer | 0 | 0 |
 | Open | 100 | 100 |
-| Favorite | persisted per device | persisted per device |
 
-The Favorite defaults to `{middle: 76, bottom: 0}` (sheer ~24%) until the user saves their own with "Save current as Favorite". The Scene component uses the standard `mode` capability for the dropdown; because the true state is two rail heights (not an enum), the displayed mode reflects the named preset the rails currently sit on, or the last-invoked scene otherwise.
+The Scene component uses the standard `mode` capability for the dropdown; because the true state is two rail heights (not an enum), the displayed mode reflects the named preset the rails currently sit on, or the last-invoked scene otherwise.
+
+Separately, the **Favorite** control (custom `dayNightFavorite` capability on the `favorite` component) stores a full `{middle, bottom}` position: the gear saves the current position, the button recalls it. It defaults to `{middle: 76, bottom: 0}` (sheer ~24%) until the user saves their own.
 
 ## Child "Sheer" Device
 
 On first init the driver creates a child device named `<shade name> Sheer` using the `smartwings-sheer` profile. This exposes the middle rail as an ordinary `windowShade` so Google Home picks it up as a second blind with full voice control ("open the sheer", "set the sheer to 50%"). It stays in sync via `sync_sheer_child()` whenever the parent receives a Z-Wave report for the middle rail.
 
-## Why the Shade and Sheer Controls Look Different
+## Why the Sheer Is a Separate Device
 
-The **Shade** (bottom rail) uses the stock `windowShade` capability — the combined tile with Open/Close/Pause buttons and a draggable percentage bar. The **Sheer** (middle rail) uses the custom `sheerLevel` slider. This asymmetry is deliberate, for two reasons:
+The opaque/bottom rail lives on the main device as a stock `windowShade`. The sheer/middle rail is **not** a control on the main device — it is exposed only through the child `<shade> Sheer` device (also a stock `windowShade`). Two reasons drove this:
 
-1. **Voice control.** `windowShade` is a standard capability that Google Home / Alexa map to their blind/openable traits, enabling "open/close/set to N%" by voice. Custom capabilities like `sheerLevel` are not exposed to voice assistants — which is why the sheer rail also gets its own child `windowShade` device for voice.
-2. **Inverted semantics.** The sheer value is inverted relative to rail height (`sheer% = 100 − middle`). Driving that through the stock `windowShade` / `windowShadeLevel` pair fought the platform's built-in shade-vs-level linkage and left the displayed value wedged. A custom slider avoids that.
+1. **Voice control.** `windowShade` is a standard capability that Google Home / Alexa map to their blind/openable traits, so both the main shade and the child Sheer device are voice-controllable ("open the blinds", "open the sheer"). Custom capabilities are not exposed to voice assistants, so a custom in-app sheer slider could not be voiced.
+2. **One place, no inversion fight.** An earlier design put a custom `sheerLevel` slider on the main device too, which showed the sheer twice and fought the platform's `windowShade`/`windowShadeLevel` linkage (the displayed value wedged). Putting the sheer solely on its own `windowShade` device removed the duplication and the linkage problem.
 
-So: stock `windowShade` where voice and standard behavior matter (the opaque shade), custom slider where clean inverted control matters (the in-app sheer). Unifying the look would break one or both.
+The child device's `windowShade` is mapped so **open = full sheer** (middle rail down) and **close = no sheer** (middle rail up); `sync_sheer_child()` keeps it in step with the middle rail.
 
 ## Z-Wave Details
 
