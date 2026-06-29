@@ -121,15 +121,31 @@ This is also run in CI and via the `luacheck` pre-commit hook.
 smartthings edge:drivers:package driver --build-only out.zip
 ```
 
-Packages the driver and validates the YAML/JSON without uploading anything.
+Packages the driver and validates the YAML/JSON **without uploading and without
+any authentication**. This is exactly what CI runs on every push/PR.
 
-### Deploy
+### Deploy / release
 
-```sh
-smartthings edge:drivers:package driver --channel <channelId> --hub <hubId>
+Releases are a **local** step — there is no CI upload. SmartThings has no
+long-lived API token (personal access tokens expire after 24 hours), so
+automating channel uploads in CI is impractical. Use the local CLI login
+(`smartthings login`, which auto-refreshes) and the setup script:
+
+```powershell
+# Release to the channel (enrolled hubs auto-update):
+./setup/Install-Driver.ps1 -ChannelId <channelId>
+
+# Or release AND install directly on a specific hub:
+./setup/Install-Driver.ps1 -ChannelId <channelId> -HubId <hubId>
 ```
 
-Re-running this re-uploads and reinstalls the driver. Notes:
+Or invoke the CLI directly:
+
+```sh
+smartthings edge:drivers:package driver --channel <channelId> [--hub <hubId>]
+```
+
+Re-running re-uploads the driver. Notes:
 
 - **Lua-only changes** hot-reload on the hub without requiring any action in the app.
 - **Profile changes** (adding/removing components or capabilities) may require re-selecting the driver in the SmartThings app (Device → **⋮** → **Driver** → re-select **SmartWings Day/Night Z-Wave**) before the new layout appears.

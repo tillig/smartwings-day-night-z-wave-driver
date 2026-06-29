@@ -1,11 +1,12 @@
 # CI workflow: lint and validate the SmartThings Edge driver on every push/PR.
 #
-# Required GitHub secret (optional — package validation is skipped when absent):
-#   SMARTTHINGS_TOKEN  — a SmartThings Personal Access Token (PAT) with at least
-#                        the "r:devices,r:installedapps" scope. Generate one at:
-#                        https://account.smartthings.com/tokens
-#                        Without this secret the Lua lint + syntax check jobs
-#                        still run; only the driver package step is skipped.
+# No secrets required. `smartthings edge:drivers:package --build-only` validates
+# config.yml / profiles / fingerprints and produces the driver zip without any
+# authentication, so the full pipeline runs for anyone (including forks/PRs).
+#
+# Releasing (uploading to a channel) is intentionally NOT done in CI — SmartThings
+# has no long-lived API token (PATs expire in 24h), so releases are a local step.
+# See setup/Release-Driver.ps1 and CONTRIBUTING.md.
 
 name: CI
 
@@ -69,9 +70,6 @@ jobs:
   package:
     name: Driver package (smartthings edge:drivers:package)
     runs-on: ubuntu-latest
-    # Skip this job entirely when the token secret is not configured.
-    # Contributors without a PAT will still get lint + pre-commit feedback.
-    if: ${{ secrets.SMARTTHINGS_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -82,17 +80,10 @@ jobs:
       - name: Install SmartThings CLI
         run: npm install -g @smartthings/cli
 
-      # The --build-only flag packages the driver zip locally without uploading
-      # it.  Even with --build-only the CLI validates config.yml, profiles, and
-      # fingerprints, so it catches schema errors.
-      #
-      # NOTE: as of SmartThings CLI v3+ --build-only still requires a valid
-      # token to initialise the SDK config subsystem.  The token is passed via
-      # the SMARTTHINGS_TOKEN environment variable which the CLI reads
-      # automatically when present.
+      # --build-only packages the driver zip locally WITHOUT uploading and
+      # WITHOUT any authentication, while still validating config.yml, profiles,
+      # and fingerprints — so it catches schema errors on every push/PR.
       - name: Package driver (build only)
-        env:
-          SMARTTHINGS_TOKEN: ${{ secrets.SMARTTHINGS_TOKEN }}
         run: |
           mkdir -p build
           smartthings edge:drivers:package driver --build-only build/driver.zip

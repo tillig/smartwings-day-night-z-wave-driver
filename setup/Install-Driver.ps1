@@ -15,9 +15,14 @@
     The hub is automatically enrolled in the channel by that command.
 
 .PARAMETER HubId
-    The SmartThings hub ID to install the driver on.
+    (Optional) The SmartThings hub ID to install the driver on directly.
     Run `smartthings edge:hubs` to find yours.
     Example: 00000000-0000-0000-0000-00000000HUB0
+
+    If omitted, the driver is packaged and assigned to the channel only (a
+    "release"): every hub already enrolled in the channel picks up the new
+    version automatically. Supply -HubId for a first-time install on a hub that
+    is not yet enrolled.
 
 .PARAMETER ChannelId
     (Optional) An existing Edge channel ID to use.
@@ -57,8 +62,8 @@
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)]
-    [string] $HubId,
+    [Parameter()]
+    [string] $HubId = '',
 
     [Parameter()]
     [string] $ChannelId = '',
@@ -182,15 +187,20 @@ else {
 # Step 2: Package, assign to channel, and install on hub
 ###############################################################################
 
-Write-Host "`n=== Step 2: Package + Assign + Install ===" -ForegroundColor Cyan
+Write-Host "`n=== Step 2: Package + Assign$(if ($HubId) { ' + Install' }) ===" -ForegroundColor Cyan
 Write-Host "  Driver directory : $driverDir"
 Write-Host "  Channel ID       : $ChannelId"
-Write-Host "  Hub ID           : $HubId"
+Write-Host "  Hub ID           : $(if ($HubId) { $HubId } else { '(none - channel release only)' })"
 Write-Host ''
 
-Write-Verbose "Running: smartthings edge:drivers:package `"$driverDir`" --channel `"$ChannelId`" --hub `"$HubId`" --json"
+# Build the CLI args. --hub is included only when a hub was supplied; without it
+# this is a "release" (package + assign to channel; enrolled hubs auto-update).
+$pkgArgs = @($driverDir, '--channel', $ChannelId)
+if ($HubId) { $pkgArgs += @('--hub', $HubId) }
 
-$pkgOutput = smartthings edge:drivers:package "$driverDir" --channel "$ChannelId" --hub "$HubId" --json 2>&1
+Write-Verbose "Running: smartthings edge:drivers:package $($pkgArgs -join ' ') --json"
+
+$pkgOutput = smartthings edge:drivers:package @pkgArgs --json 2>&1
 $pkgExit   = $LASTEXITCODE
 
 if ($pkgExit -ne 0) {
@@ -225,13 +235,21 @@ else {
 
 Write-Host "`n=== Summary ===" -ForegroundColor Cyan
 Write-Host "  Channel ID : $ChannelId"
-Write-Host "  Hub ID     : $HubId"
+Write-Host "  Hub ID     : $(if ($HubId) { $HubId } else { '(none - channel release only)' })"
 if ($driverResult) {
     $driverId = $driverResult.driverId
     if (-not $driverId) { $driverId = $driverResult.id }
     if ($driverId) { Write-Host "  Driver ID  : $driverId" }
 }
 Write-Host ''
-Write-Host 'Installation complete.' -ForegroundColor Green
-Write-Host 'The hub has been enrolled in the channel and the driver is installed.' -ForegroundColor Cyan
-Write-Host 'Pair your SmartWings shade to the hub to start using it.' -ForegroundColor Cyan
+if ($HubId) {
+    Write-Host 'Installation complete.' -ForegroundColor Green
+    Write-Host 'The hub has been enrolled in the channel and the driver is installed.' -ForegroundColor Cyan
+    Write-Host 'Pair your SmartWings shade to the hub to start using it.' -ForegroundColor Cyan
+}
+else {
+    Write-Host 'Release complete.' -ForegroundColor Green
+    Write-Host 'The new driver version is assigned to the channel; enrolled hubs will' -ForegroundColor Cyan
+    Write-Host 'pick it up automatically (usually within ~12 hours, or immediately if you' -ForegroundColor Cyan
+    Write-Host 're-select the driver on the device in the SmartThings app).' -ForegroundColor Cyan
+}
