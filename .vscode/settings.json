@@ -1,5 +1,4 @@
 {
-  "markdown.extension.toc.levels": "2..6",
   "cSpell.words": [
     "daynight",
     "logcat",
@@ -7,5 +6,6 @@
     "luarocks",
     "smartthings",
     "smartwings"
-  ]
+  ],
+  "markdown.extension.toc.levels": "2..6"
 }
