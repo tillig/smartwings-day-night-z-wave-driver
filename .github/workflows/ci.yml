@@ -23,13 +23,13 @@ jobs:
     name: pre-commit (lint + Lua)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Lua + luacheck so the luac-syntax-check and luacheck hooks can run.
-      - uses: leafo/gh-actions-lua@v10
+      - uses: leafo/gh-actions-lua@v13
         with:
           luaVersion: "5.3"
-      - uses: leafo/gh-actions-luarocks@v4
+      - uses: leafo/gh-actions-luarocks@v6
       - name: Install luacheck
         run: luarocks install luacheck
 
@@ -39,7 +39,7 @@ jobs:
         shell: pwsh
         run: Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
       - name: Install pre-commit
@@ -55,9 +55,9 @@ jobs:
     name: Driver package (build only)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
 
@@ -73,7 +73,7 @@ jobs:
           smartthings edge:drivers:package driver --build-only build/driver.zip
 
       - name: Upload driver zip artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: driver-zip
           path: build/driver.zip
