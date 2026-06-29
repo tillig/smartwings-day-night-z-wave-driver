@@ -30,16 +30,16 @@
 
 .EXAMPLE
     # First time on a fresh account -- create everything:
-    ./Setup.ps1 -HubId '00000000-0000-0000-0000-00000000HUB0'
+    ./Initialize-Driver.ps1 -HubId '00000000-0000-0000-0000-00000000HUB0'
 
 .EXAMPLE
     # Re-install with an existing channel:
-    ./Setup.ps1 `
+    ./Initialize-Driver.ps1 `
         -HubId     '00000000-0000-0000-0000-00000000HUB0' `
         -ChannelId '00000000-0000-0000-0000-0000000CHAN0'
 
 .EXAMPLE
-    ./Setup.ps1 -HubId '00000000-0000-0000-0000-00000000HUB0' -Verbose
+    ./Initialize-Driver.ps1 -HubId '00000000-0000-0000-0000-00000000HUB0' -Verbose
 
 .NOTES
     Prerequisites:

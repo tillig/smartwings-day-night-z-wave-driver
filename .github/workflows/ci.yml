@@ -6,7 +6,7 @@
 #
 # Releasing (uploading to a channel) is intentionally NOT done in CI — SmartThings
 # has no long-lived API token (PATs expire in 24h), so releases are a local step.
-# See setup/Update.ps1 and CONTRIBUTING.md.
+# See setup/Update-Driver.ps1 and CONTRIBUTING.md.
 
 name: CI
 
@@ -32,6 +32,12 @@ jobs:
       - uses: leafo/gh-actions-luarocks@v4
       - name: Install luacheck
         run: luarocks install luacheck
+
+      # PSScriptAnalyzer for the powershell-script-analyzer hook (pwsh is
+      # preinstalled on ubuntu-latest runners).
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
 
       - uses: actions/setup-python@v5
         with:

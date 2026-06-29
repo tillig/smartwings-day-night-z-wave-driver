@@ -40,15 +40,15 @@
 
 .EXAMPLE
     # Everyday upgrade (uses the cached channel):
-    ./Update.ps1
+    ./Update-Driver.ps1
 
 .EXAMPLE
     # First time: point at your channel by name (then it's cached):
-    ./Update.ps1 -ChannelName 'Tillig Personal Drivers'
+    ./Update-Driver.ps1 -ChannelName 'Tillig Personal Drivers'
 
 .EXAMPLE
     # First time with no channel yet: create one:
-    ./Update.ps1 -ChannelName 'My Drivers' -CreateChannel
+    ./Update-Driver.ps1 -ChannelName 'My Drivers' -CreateChannel
 
 .NOTES
     Prerequisites:
@@ -162,7 +162,7 @@ Could not resolve a channel.
 $(if ($ChannelName) { "- no channel named '$ChannelName' was found." } else { '- no -ChannelName was given.' })
 
 Options:
-  * First-time setup: ./Update.ps1 -ChannelName '<your channel>' [-CreateChannel]
+  * First-time setup: ./Update-Driver.ps1 -ChannelName '<your channel>' [-CreateChannel]
   * Or run ./Install-Driver.ps1 to create a channel and install on your hub.
 
 Your channels:
@@ -210,7 +210,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $result = $null
-try { $result = $pkgOut | ConvertFrom-Json } catch { }
+try { $result = $pkgOut | ConvertFrom-Json } catch { Write-Verbose 'Package output was not JSON; continuing without parsed details.' }
 $driverId = if ($result) { if ($result.driverId) { $result.driverId } else { $result.id } } else { $null }
 $version = if ($result) { $result.version } else { $null }
 

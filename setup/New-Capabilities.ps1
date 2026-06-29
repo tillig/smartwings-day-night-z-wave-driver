@@ -59,9 +59,10 @@ $ErrorActionPreference = 'Stop'
 
 # setup/ is one level below repo root; driver/ is a sibling of setup/.
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$capDir = Join-Path $repoRoot 'driver' 'capabilities'
-$profileDir = Join-Path $repoRoot 'driver' 'profiles'
-$srcDir = Join-Path $repoRoot 'driver' 'src'
+$driverDir = Join-Path -Path $repoRoot -ChildPath 'driver'
+$capDir = Join-Path -Path $driverDir -ChildPath 'capabilities'
+$profileDir = Join-Path -Path $driverDir -ChildPath 'profiles'
+$srcDir = Join-Path -Path $driverDir -ChildPath 'src'
 
 # The namespace currently baked into the driver source files (overridable via
 # the -KnownNamespace parameter).
@@ -90,7 +91,7 @@ Write-Verbose "smartthings CLI found at: $((Get-Command 'smartthings').Source)"
 
 Write-Host 'Checking SmartThings authentication...' -ForegroundColor Cyan
 Write-Verbose 'Running: smartthings devices --json (used as auth probe)'
-$authTest = smartthings devices --json 2>&1
+smartthings devices --json *> $null
 if ($LASTEXITCODE -ne 0) {
     Write-Error @'
 The SmartThings CLI does not appear to be authenticated (or returned an error).
@@ -111,7 +112,7 @@ Write-Verbose 'Authentication probe succeeded.'
 ###############################################################################
 
 function New-Capability {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)] [string] $CapabilityJsonPath,
         [Parameter(Mandatory)] [string] $PresentationJsonPath,
@@ -119,6 +120,10 @@ function New-Capability {
     )
 
     Write-Host "`n--- Capability: $FriendlyName ---" -ForegroundColor Yellow
+
+    if (-not $PSCmdlet.ShouldProcess($FriendlyName, 'Create SmartThings capability and presentation')) {
+        return
+    }
 
     # --- Create capability ---
     Write-Host "  Creating capability from: $CapabilityJsonPath"

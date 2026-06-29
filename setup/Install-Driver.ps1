@@ -108,7 +108,7 @@ Write-Verbose "smartthings CLI found at: $((Get-Command 'smartthings').Source)"
 
 Write-Host 'Checking SmartThings authentication...' -ForegroundColor Cyan
 Write-Verbose 'Running: smartthings devices --json (used as auth probe)'
-$authTest = smartthings devices --json 2>&1
+smartthings devices --json *> $null
 if ($LASTEXITCODE -ne 0) {
     Write-Error @'
 The SmartThings CLI does not appear to be authenticated (or returned an error).

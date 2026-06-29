@@ -102,7 +102,7 @@ The `setup/` directory contains PowerShell scripts that automate everything (cre
 **Later, to deploy an updated version of the driver**, just run:
 
 ```powershell
-./setup/Update.ps1
+./setup/Update-Driver.ps1
 ```
 
 It remembers your channel after the first run, so upgrades are a single command with no arguments.
