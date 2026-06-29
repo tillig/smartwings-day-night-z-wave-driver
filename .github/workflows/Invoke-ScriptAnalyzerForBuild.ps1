@@ -54,18 +54,11 @@ process {
     try {
         if ($args) {
             $args | ForEach-Object {
-                $analysisResults += Invoke-ScriptAnalyzer -Path $_ -Settings $PSScriptRoot/../PSScriptAnalyzerSettings.psd1 -Verbose:$enableVerbose -ErrorAction SilentlyContinue
+                $analysisResults += Invoke-ScriptAnalyzer -Path $_ -Settings $PSScriptRoot/../../PSScriptAnalyzerSettings.psd1 -Verbose:$enableVerbose -ErrorAction SilentlyContinue
             }
         }
         else {
-            $sourceResults = Invoke-ScriptAnalyzer -Path $PSScriptRoot/../src -Recurse -Settings $PSScriptRoot/../PSScriptAnalyzerSettings.psd1 -Verbose:$enableVerbose -ErrorAction SilentlyContinue
-            if ($sourceResults) {
-                $analysisResults += $sourceResults
-            }
-            $testResults = Invoke-ScriptAnalyzer -Path $PSScriptRoot/../test -Recurse -Settings $PSScriptRoot/../PSScriptAnalyzerSettings.psd1 -Verbose:$enableVerbose -ErrorAction SilentlyContinue
-            if ($testResults) {
-                $analysisResults += $testResults
-            }
+            $analysisResults = Invoke-ScriptAnalyzer -Path $PSScriptRoot/../.. -Recurse -Settings $PSScriptRoot/../../PSScriptAnalyzerSettings.psd1 -Verbose:$enableVerbose -ErrorAction SilentlyContinue
         }
     }
     catch {
