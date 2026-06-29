@@ -37,3 +37,9 @@ repos:
         types: [file]
         files: \.lua$
         pass_filenames: true
+      - id: PSScriptAnalyzer
+        name: powershell script analyzer
+        description: Run PSScriptAnalyzer on commit.
+        types: [file, powershell]
+        language: system
+        entry: pwsh -NoProfile -File ./.github/workflows/Invoke-ScriptAnalyzerForBuild.ps1
