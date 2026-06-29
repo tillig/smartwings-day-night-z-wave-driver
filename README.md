@@ -95,14 +95,14 @@ For scenes/Favorite: create SmartThings Scenes (Google Home exposes those as voi
 The `setup/` directory contains PowerShell scripts that automate everything (creating custom capabilities, creating a channel, and installing the driver):
 
 1. Run `setup/New-Capabilities.ps1` to create the custom capabilities in your SmartThings account.
-2. Run `setup/Install-Driver.ps1 -HubId <your-hub-id>` to package, upload, and install the driver. (`smartthings edge:hubs` lists your hub IDs.)
+2. Run `setup/Deploy-Driver.ps1 -ChannelName '<name>' -CreateChannel -HubId <your-hub-id>` to create a channel, package the driver, and install it. (`smartthings edge:hubs` lists your hub IDs.)
 3. In the SmartThings app, go to the device → **⋮** → **Driver** → select **SmartWings Day/Night Z-Wave**.
 4. Delete the two old junk child devices left behind by the stock driver (they will show up as unrecognized devices).
 
 **Later, to deploy an updated version of the driver**, just run:
 
 ```powershell
-./setup/Update-Driver.ps1
+./setup/Deploy-Driver.ps1
 ```
 
 It remembers your channel after the first run, so upgrades are a single command with no arguments.

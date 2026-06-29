@@ -6,10 +6,11 @@
 
 .DESCRIPTION
     This is the "run this one script" entry point. It calls New-Capabilities.ps1
-    and then Install-Driver.ps1 in sequence.
+    and then Deploy-Driver.ps1 in sequence.
 
-    For finer-grained control (e.g. re-running just the install step) call the
-    individual scripts directly.
+    For finer-grained control (e.g. re-deploying without re-creating
+    capabilities) call the individual scripts directly. Later upgrades are just
+    ./Deploy-Driver.ps1.
 
 .PARAMETER HubId
     The SmartThings hub ID to install the driver on.
@@ -22,11 +23,8 @@
     Example: 00000000-0000-0000-0000-0000000CHAN0
 
 .PARAMETER ChannelName
-    (Optional) Name for the new channel if -ChannelId is not provided.
-    Defaults to "SmartWings Day/Night Z-Wave".
-
-.PARAMETER ChannelDescription
-    (Optional) Description for the new channel if one is being created.
+    (Optional) Name for the channel. If -ChannelId is not provided, a channel
+    with this name is found or created. Defaults to "SmartWings Day/Night Z-Wave".
 
 .EXAMPLE
     # First time on a fresh account -- create everything:
@@ -57,10 +55,7 @@ param(
     [string] $ChannelId = '',
 
     [Parameter()]
-    [string] $ChannelName = 'SmartWings Day/Night Z-Wave',
-
-    [Parameter()]
-    [string] $ChannelDescription = 'Edge channel for the SmartWings dual-motor day/night cellular shade Z-Wave driver.'
+    [string] $ChannelName = 'SmartWings Day/Night Z-Wave'
 )
 
 Set-StrictMode -Version Latest
@@ -104,20 +99,21 @@ Write-Host ''
 Write-Host '>>> Step 2/2: Packaging and installing driver...' -ForegroundColor Cyan
 Write-Host ''
 
-$installScript = Join-Path $scriptDir 'Install-Driver.ps1'
+$deployScript = Join-Path $scriptDir 'Deploy-Driver.ps1'
 
-$installArgs = @{
-    HubId              = $HubId
-    ChannelName        = $ChannelName
-    ChannelDescription = $ChannelDescription
+# First-time setup: install on the hub and create the channel if it's not found.
+$deployArgs = @{
+    HubId         = $HubId
+    ChannelName   = $ChannelName
+    CreateChannel = $true
 }
 if ($ChannelId) {
-    $installArgs['ChannelId'] = $ChannelId
+    $deployArgs['ChannelId'] = $ChannelId
 }
 
-& $installScript @installArgs @verboseArg
+& $deployScript @deployArgs @verboseArg
 if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
-    Write-Error "Install-Driver.ps1 exited with code $LASTEXITCODE. Aborting."
+    Write-Error "Deploy-Driver.ps1 exited with code $LASTEXITCODE. Aborting."
 }
 
 Write-Host ''

@@ -1,26 +1,26 @@
 ﻿#Requires -Version 7.0
 <#
 .SYNOPSIS
-    One-command upgrade: package the latest driver and push it to your channel.
+    Package the driver and deploy it to your SmartThings channel — for both the
+    first install and every later upgrade.
 
 .DESCRIPTION
-    This is the "deploy the latest changes" button. After the first run it takes
-    no arguments at all:
+    One script for all deploys. It:
 
-      1. Resolves your channel:
-         - uses a locally cached channel ID (setup/.local/channel-id) if present;
-         - else finds a channel by -ChannelName;
-         - else (with -CreateChannel) creates one.
-         The resolved ID is cached so future runs need nothing.
-      2. Packages the driver and assigns it to that channel.
+      1. Resolves your channel, in order: explicit -ChannelId, then a locally
+         cached channel ID (setup/.local/channel-id), then a channel matching
+         -ChannelName, then (with -CreateChannel) a newly created channel. The
+         resolved ID is cached so later runs need no arguments.
+      2. Packages the driver and assigns it to that channel. If -HubId is given,
+         the driver is also installed directly on that hub.
 
     Every hub already enrolled in the channel picks up the new version
     automatically (within ~12 hours, or immediately if you re-select the driver
-    on the device in the SmartThings app).
+    on the device in the SmartThings app). No secrets required.
 
-    No secrets, and after the first run no IDs to remember. For a brand-new
-    install on a hub that is not yet enrolled, pass -HubId (or use
-    Install-Driver.ps1).
+    First-time install: pass -ChannelName (with -CreateChannel if the channel
+    does not exist yet) and -HubId to enroll your hub. After that, a bare
+    ./Deploy-Driver.ps1 upgrades using the cached channel.
 
 .PARAMETER ChannelId
     (Optional) Explicit channel ID. Overrides the cache and -ChannelName, and is
@@ -36,19 +36,20 @@
 
 .PARAMETER HubId
     (Optional) If supplied, the driver is also installed directly on this hub.
-    Normally not needed for upgrades once the hub is enrolled.
+    Needed for a first-time install on a hub not yet enrolled in the channel;
+    not needed for routine upgrades.
 
 .EXAMPLE
     # Everyday upgrade (uses the cached channel):
-    ./Update-Driver.ps1
+    ./Deploy-Driver.ps1
 
 .EXAMPLE
-    # First time: point at your channel by name (then it's cached):
-    ./Update-Driver.ps1 -ChannelName 'Tillig Personal Drivers'
+    # First-time install: create the channel and enroll your hub:
+    ./Deploy-Driver.ps1 -ChannelName 'My Drivers' -CreateChannel -HubId '<hub-id>'
 
 .EXAMPLE
-    # First time with no channel yet: create one:
-    ./Update-Driver.ps1 -ChannelName 'My Drivers' -CreateChannel
+    # Point at an existing channel by name (then it's cached):
+    ./Deploy-Driver.ps1 -ChannelName 'Tillig Personal Drivers'
 
 .NOTES
     Prerequisites:
@@ -162,8 +163,8 @@ Could not resolve a channel.
 $(if ($ChannelName) { "- no channel named '$ChannelName' was found." } else { '- no -ChannelName was given.' })
 
 Options:
-  * First-time setup: ./Update-Driver.ps1 -ChannelName '<your channel>' [-CreateChannel]
-  * Or run ./Install-Driver.ps1 to create a channel and install on your hub.
+  * First-time install: ./Deploy-Driver.ps1 -ChannelName '<your channel>' -CreateChannel -HubId '<hub-id>'
+  * Existing channel:   ./Deploy-Driver.ps1 -ChannelName '<your channel>'
 
 Your channels:
 $(($channels | ForEach-Object { "  $($_.name)  [$(if ($_.channelId) { $_.channelId } else { $_.id })]" }) -join "`n")

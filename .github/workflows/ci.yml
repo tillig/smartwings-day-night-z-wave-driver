@@ -6,7 +6,7 @@
 #
 # Releasing (uploading to a channel) is intentionally NOT done in CI — SmartThings
 # has no long-lived API token (PATs expire in 24h), so releases are a local step.
-# See setup/Update-Driver.ps1 and CONTRIBUTING.md.
+# See setup/Deploy-Driver.ps1 and CONTRIBUTING.md.
 
 name: CI
 

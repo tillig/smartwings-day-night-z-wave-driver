@@ -309,4 +309,4 @@ Write-Host "  sheerLevel ID    : $sheerLevelId"
 Write-Host "  saveFavorite ID  : $saveFavoriteId"
 Write-Host ''
 Write-Host 'Capabilities step complete.' -ForegroundColor Green
-Write-Host 'Next: run ./Install-Driver.ps1 to package and install the driver.' -ForegroundColor Cyan
+Write-Host 'Next: run ./Deploy-Driver.ps1 (or ./Initialize-Driver.ps1) to package and install the driver.' -ForegroundColor Cyan

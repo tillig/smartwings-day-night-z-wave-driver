@@ -65,14 +65,14 @@ pre-commit run --all-files
 smartthings edge:drivers:package driver --build-only out.zip
 ```
 
-Deploy a new build. Releases are a **local** step — there is no CI upload, because SmartThings has no long-lived API token (PATs expire after 24 hours). The simplest path is `setup/Update-Driver.ps1`, which resolves your channel (cached after the first run) and packages + assigns the driver:
+Deploy a new build. Releases are a **local** step — there is no CI upload, because SmartThings has no long-lived API token (PATs expire after 24 hours). The simplest path is `setup/Deploy-Driver.ps1`, which resolves your channel (cached after the first run) and packages + assigns the driver:
 
 ```powershell
 # First time — point it at your channel by name (then it's cached):
-./setup/Update-Driver.ps1 -ChannelName '<your channel name>'
+./setup/Deploy-Driver.ps1 -ChannelName '<your channel name>'
 
 # Every time after that — no arguments needed:
-./setup/Update-Driver.ps1
+./setup/Deploy-Driver.ps1
 ```
 
 After deploying, **Lua-only changes** hot-reload on the hub automatically, but **profile changes** (adding/removing components or capabilities) require re-selecting the driver in the SmartThings app (Device → **⋮** → **Driver** → re-select **SmartWings Day/Night Z-Wave**) before the new layout appears.
