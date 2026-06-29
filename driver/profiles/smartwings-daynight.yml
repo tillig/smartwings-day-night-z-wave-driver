@@ -32,9 +32,7 @@ components:
   - id: scene
     label: Scene
     capabilities:
-      - id: mode
-        version: 1
-      - id: happyvessel61954.activateScene
+      - id: happyvessel61954.dayNightScene
         version: 1
     categories:
       - name: Blind

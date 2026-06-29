@@ -47,7 +47,7 @@ Each shade shows up as **two devices**:
 | Section     | What it is                                  | What it controls                                          |
 | ----------- | ------------------------------------------- | --------------------------------------------------------- |
 | **Shade**   | Window shade tile with Open/Close/Pause + % | Bottom rail. 0% = closed/covered, 100% = open/see-through |
-| **Scene**   | Mode dropdown + Apply button                | One-tap preset positions for both rails (see below)       |
+| **Scene**   | Row of buttons (Blackout / Sheer / Open)    | One-tap preset positions for both rails (see below)       |
 | **Favorite**| Save (gear) + Go button + readout           | Saves and recalls a full both-rail position you like      |
 | **Battery** | Battery level                               | —                                                         |
 
@@ -61,7 +61,7 @@ Each shade shows up as **two devices**:
 | **Sheer**    | Both rails down — full sheer fabric visible |
 | **Open**     | Both rails up — fully open, see-through     |
 
-**Apply selected mode** re-fires the currently selected mode. This matters because the dropdown is stateful — re-selecting an already-selected mode won't re-trigger it; the button always fires.
+Each scene is a button — tap **Blackout**, **Sheer**, or **Open** and the shade moves there immediately.
 
 **Favorite**: tap the gear to save wherever both rails are right now, then the Go button restores that look in one tap.
 
@@ -115,14 +115,14 @@ It remembers your channel after the first run, so upgrades are a single command 
 1. Create the custom capabilities from `driver/capabilities/`:
 
    ```powershell
-   smartthings capabilities:create -i driver/capabilities/activateScene.capability.json
-   smartthings capabilities:presentation:create <id> -i driver/capabilities/activateScene.presentation.json
+   smartthings capabilities:create -i driver/capabilities/dayNightScene.capability.json
+   smartthings capabilities:presentation:create <id> -i driver/capabilities/dayNightScene.presentation.json
 
    smartthings capabilities:create -i driver/capabilities/dayNightFavorite.capability.json
    smartthings capabilities:presentation:create <id> -i driver/capabilities/dayNightFavorite.presentation.json
    ```
 
-2. Note the assigned capability IDs (they'll have your account namespace prefix, e.g. `yournamespace.activateScene`). Update the namespace prefix in `driver/profiles/*.yml` and `driver/src/init.lua` if it differs from `happyvessel61954.` — see [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+2. Note the assigned capability IDs (they'll have your account namespace prefix, e.g. `yournamespace.dayNightScene`). Update the namespace prefix in `driver/profiles/*.yml` and `driver/src/init.lua` if it differs from `happyvessel61954.` — see [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 3. Create a channel (the command prompts for a name and description; choose type `DRIVER`). Note the channel ID it prints:
 
    ```powershell

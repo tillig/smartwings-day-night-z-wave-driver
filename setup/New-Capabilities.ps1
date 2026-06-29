@@ -9,7 +9,7 @@
     presentations to your SmartThings account using the SmartThings CLI.
 
     Capabilities created:
-      - <namespace>.activateScene     (stateless button: apply selected scene)
+      - <namespace>.dayNightScene     (button row: Blackout / Sheer / Open)
       - <namespace>.dayNightFavorite  (save + recall a both-rail favorite)
 
     The capability namespace is assigned by SmartThings per account. The driver
@@ -222,10 +222,10 @@ function New-Capability {
 # Main: create/verify all three capabilities
 ###############################################################################
 
-$activateSceneId = New-Capability `
-    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'activateScene.capability.json') `
-    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'activateScene.presentation.json') `
-    -FriendlyName 'activateScene'
+$sceneId = New-Capability `
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightScene.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightScene.presentation.json') `
+    -FriendlyName 'dayNightScene'
 
 $favoriteId = New-Capability `
     -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightFavorite.capability.json') `
@@ -240,7 +240,7 @@ Write-Host "`n=== Namespace Verification ===" -ForegroundColor Cyan
 
 # Extract the namespace portion from any of the returned IDs (format: namespace.name).
 $detectedNamespace = $null
-foreach ($id in @($activateSceneId, $favoriteId)) {
+foreach ($id in @($sceneId, $favoriteId)) {
     if ($id -and $id -match '^([^.]+)\.') {
         $detectedNamespace = $Matches[1]
         break
@@ -298,7 +298,7 @@ Files to update (search/replace '$knownNamespace' -> '$detectedNamespace'):
 ###############################################################################
 
 Write-Host "`n=== Summary ===" -ForegroundColor Cyan
-Write-Host "  activateScene ID    : $activateSceneId"
+Write-Host "  dayNightScene ID    : $sceneId"
 Write-Host "  dayNightFavorite ID : $favoriteId"
 Write-Host ''
 Write-Host 'Capabilities step complete.' -ForegroundColor Green

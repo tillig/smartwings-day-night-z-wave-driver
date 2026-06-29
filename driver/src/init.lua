@@ -20,8 +20,8 @@
 -- UX (parent device components):
 --   * "main"  presents the BOTTOM rail as an ordinary window shade so that
 --     Google Home / voice "open|close|set NN%" behave like a normal blind.
---   * "scene" offers one-tap day/night scenes (mode dropdown + "apply" button):
---     Blackout / Sheer / Open.
+--   * "scene" offers one-tap day/night scenes as a row of buttons (each fires
+--     immediately, like the stock shade's open/close/pause): Blackout / Sheer / Open.
 --   * "favorite" saves/recalls a full both-rail position (gear + button).
 -- The MIDDLE rail (sheer) has NO parent component; it is exposed only through a
 -- CHILD device ("<label> Sheer") -- an ordinary window shade so Google Home can
@@ -29,7 +29,7 @@
 --
 -- CUSTOM CAPABILITIES: this driver references two custom capabilities whose IDs
 -- embed a per-SmartThings-account namespace prefix (here "happyvessel61954."):
---   happyvessel61954.activateScene    (stateless "apply selected mode" button)
+--   happyvessel61954.dayNightScene    (button row: Blackout / Sheer / Open)
 --   happyvessel61954.dayNightFavorite (save + recall a both-rail favorite)
 -- Their source definitions live in driver/capabilities/*.json. A DIFFERENT account
 -- gets a DIFFERENT namespace, so a fork must recreate them and find/replace the
@@ -62,8 +62,10 @@ local SCENE_COMPONENT = "scene"   -- day/night scene picker + buttons (no endpoi
 local BOTTOM_EP = 1
 local MIDDLE_EP = 2
 
--- Custom stateless "apply selected scene" button capability.
-local ACTIVATE_SCENE_CAP = "happyvessel61954.activateScene"
+-- Custom "day/night scene" capability: a row of buttons (Blackout / Sheer / Open),
+-- each firing setScene immediately (rendered as a `list` like the stock shade's
+-- open/close/pause). Replaces the old mode dropdown + apply button.
+local SCENE_CAP = "happyvessel61954.dayNightScene"
 -- Custom "day/night favorite" capability: save (gear) + recall (button) of a
 -- full both-rail position, with a string readout of the saved value. Modeled on
 -- the stock windowShadePreset, but it stores BOTH rails (stock holds only one).
@@ -208,11 +210,10 @@ end
 -- Scene / mode display
 --------------------------------------------------------------------------------
 
--- Publish supported modes and a current mode value. The generic `mode` capability
--- renders "-" until it has both a supported list and a non-nil current value.
--- Since the true state is two rail heights (not an enum), the value reflects the
--- named scene the rails sit on, or the last scene invoked otherwise.
-local function current_mode(device)
+-- The current scene the rails sit on (one of SUPPORTED_MODES), or the last scene
+-- invoked when the rails are between named scenes. Since the true state is two
+-- rail heights (not an enum), this is a best-effort label for the button row.
+local function current_scene(device)
   local middle, bottom = get_middle(device), get_bottom(device)
   if middle >= 100 and bottom <= 0 then
     return MODE_BLACKOUT
@@ -221,17 +222,16 @@ local function current_mode(device)
   elseif middle >= 100 and bottom >= 100 then
     return MODE_OPEN
   end
-  return device:get_latest_state(SCENE_COMPONENT, capabilities.mode.ID,
-    capabilities.mode.mode.NAME) or MODE_BLACKOUT
+  return device:get_latest_state(SCENE_COMPONENT, SCENE_CAP, "scene") or MODE_BLACKOUT
 end
 
-local function emit_mode(device, mode)
+-- Publish the supported scene list (so the button row renders) and the current
+-- highlighted scene.
+local function emit_scene(device, scene)
   device:emit_component_event(device.profile.components[SCENE_COMPONENT],
-    capabilities.mode.supportedModes(SUPPORTED_MODES, { visibility = { displayed = false } }))
+    capabilities[SCENE_CAP].supportedScenes(SUPPORTED_MODES, { visibility = { displayed = false } }))
   device:emit_component_event(device.profile.components[SCENE_COMPONENT],
-    capabilities.mode.supportedArguments(SUPPORTED_MODES, { visibility = { displayed = false } }))
-  device:emit_component_event(device.profile.components[SCENE_COMPONENT],
-    capabilities.mode.mode(mode))
+    capabilities[SCENE_CAP].scene(scene))
 end
 
 --------------------------------------------------------------------------------
@@ -384,18 +384,13 @@ local function apply_scene(device, scene)
     log.warn("apply_scene: unknown scene " .. tostring(scene))
     return false
   end
-  emit_mode(device, scene)
+  emit_scene(device, scene)
   return true
 end
 
-local function set_mode(driver, device, command)
-  apply_scene(device, command.args.mode)
-end
-
--- Stateless button: re-apply whatever scene is currently selected in the dropdown.
-local function activate_scene(driver, device, command)
-  apply_scene(device, device:get_latest_state(SCENE_COMPONENT, capabilities.mode.ID,
-    capabilities.mode.mode.NAME) or MODE_BLACKOUT)
+-- setScene: one of the scene buttons (Blackout / Sheer / Open) was tapped.
+local function set_scene(driver, device, command)
+  apply_scene(device, command.args.scene)
 end
 
 
@@ -417,8 +412,7 @@ local function switch_multilevel_report(driver, device, cmd)
     emit_bottom(device, height)
   end
 
-  device:emit_component_event(device.profile.components[SCENE_COMPONENT],
-    capabilities.mode.mode(current_mode(device)))
+  emit_scene(device, current_scene(device))
 end
 
 --------------------------------------------------------------------------------
@@ -435,7 +429,7 @@ local function device_init(self, device)
   if device.network_type == "DEVICE_EDGE_CHILD" then return end
   device:set_component_to_endpoint_fn(component_to_endpoint)
   device:set_endpoint_to_component_fn(endpoint_to_component)
-  emit_mode(device, current_mode(device))
+  emit_scene(device, current_scene(device))
   emit_favorite(device)
   ensure_sheer_child(self, device)
 end
@@ -452,7 +446,7 @@ local function device_added(self, device)
   device:emit_component_event(device.profile.components[BOTTOM_COMPONENT],
     capabilities.windowShade.supportedWindowShadeCommands(
       { "open", "close", "pause" }, { visibility = { displayed = false } }))
-  emit_mode(device, current_mode(device))
+  emit_scene(device, current_scene(device))
   emit_favorite(device)
   ensure_sheer_child(self, device)
   refresh_positions(device)
@@ -484,11 +478,8 @@ local driver_template = {
     [capabilities.refresh.ID] = {
       [capabilities.refresh.commands.refresh.NAME] = do_refresh,
     },
-    [capabilities.mode.ID] = {
-      [capabilities.mode.commands.setMode.NAME] = set_mode,
-    },
-    [ACTIVATE_SCENE_CAP] = {
-      ["activate"] = activate_scene,
+    [SCENE_CAP] = {
+      ["setScene"] = set_scene,
     },
     [FAVORITE_CAP] = {
       ["save"] = save_favorite,

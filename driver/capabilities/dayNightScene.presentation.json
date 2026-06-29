@@ -1,0 +1,64 @@
+{
+  "automation": {
+    "actions": [
+    ],
+    "conditions": [
+    ]
+  },
+  "dashboard": {
+    "actions": [
+    ],
+    "states": [
+    ]
+  },
+  "detailView": [
+    {
+      "displayType": "list",
+      "label": "Scene",
+      "list": {
+        "command": {
+          "alternatives": [
+            {
+              "key": "Blackout",
+              "type": "active",
+              "value": "Blackout"
+            },
+            {
+              "key": "Sheer",
+              "type": "active",
+              "value": "Sheer"
+            },
+            {
+              "key": "Open",
+              "type": "active",
+              "value": "Open"
+            }
+          ],
+          "name": "setScene",
+          "supportedValues": "supportedScenes.value"
+        },
+        "state": {
+          "alternatives": [
+            {
+              "key": "Blackout",
+              "type": "active",
+              "value": "Blackout"
+            },
+            {
+              "key": "Sheer",
+              "type": "active",
+              "value": "Sheer"
+            },
+            {
+              "key": "Open",
+              "type": "active",
+              "value": "Open"
+            }
+          ],
+          "value": "scene.value",
+          "valueType": "string"
+        }
+      }
+    }
+  ]
+}

@@ -39,7 +39,7 @@ The driver uses two custom capabilities, which live in the SmartThings account (
 
 | Capability | ID | Purpose |
 | --- | --- | --- |
-| Activate Scene | `<namespace>.activateScene` | Stateless "Apply selected mode" push button |
+| Day Night Scene | `<namespace>.dayNightScene` | Row of buttons (Blackout / Sheer / Open); each fires `setScene` immediately |
 | Day Night Favorite | `<namespace>.dayNightFavorite` | Save (gear) and recall (button) a full both-rail favorite position, with a readout of the saved value |
 
 Create them with the CLI (or `setup/New-Capabilities.ps1`, which does all of them):
@@ -49,7 +49,7 @@ smartthings capabilities:create -i driver/capabilities/<name>.capability.json
 smartthings capabilities:presentation:create <capabilityId> -i driver/capabilities/<name>.presentation.json
 ```
 
-The resulting ID takes the form `<accountNamespace>.<name>` (e.g. `happyvessel61954.activateScene`). The namespace is assigned per SmartThings account, and `driver/profiles/smartwings-daynight.yml` and `driver/src/init.lua` hardcode the prefix `happyvessel61954.`. **To run this on a different account**, find your namespace (`smartthings capabilities:namespaces`), then find-and-replace `happyvessel61954.` with it in those two files before packaging.
+The resulting ID takes the form `<accountNamespace>.<name>` (e.g. `happyvessel61954.dayNightScene`). The namespace is assigned per SmartThings account, and `driver/profiles/smartwings-daynight.yml` and `driver/src/init.lua` hardcode the prefix `happyvessel61954.`. **To run this on a different account**, find your namespace (`smartthings capabilities:namespaces`), then find-and-replace `happyvessel61954.` with it in those two files before packaging.
 
 ## Development Workflow
 
@@ -97,7 +97,7 @@ Scenes are stored as rail heights `{middle, bottom}`:
 | Sheer | 0 | 0 |
 | Open | 100 | 100 |
 
-The Scene component uses the standard `mode` capability for the dropdown; because the true state is two rail heights (not an enum), the displayed mode reflects the named preset the rails currently sit on, or the last-invoked scene otherwise.
+The Scene component uses the custom `dayNightScene` capability, rendered as a row of buttons (`displayType: list`, like the stock shade's open/close/pause) — each button fires `setScene` immediately. Because the true state is two rail heights (not an enum), the highlighted scene reflects the named preset the rails currently sit on, or the last-invoked scene otherwise.
 
 Separately, the **Favorite** control (custom `dayNightFavorite` capability on the `favorite` component) stores a full `{middle, bottom}` position: the gear saves the current position, the button recalls it. It defaults to `{middle: 76, bottom: 0}` (sheer ~24%) until the user saves their own.
 
