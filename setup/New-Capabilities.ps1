@@ -21,6 +21,13 @@
     The script is idempotent: if a capability already exists, it skips creation
     and uses the existing ID.
 
+.PARAMETER KnownNamespace
+    The capability namespace currently hardcoded in the driver source
+    (driver/profiles/*.yml and driver/src/init.lua). Defaults to the value
+    committed to this repo. If your SmartThings account is assigned a different
+    namespace, the script compares against this value and tells you what to
+    update. Override only if you have already changed the prefix in the source.
+
 .PARAMETER Verbose
     Show detailed progress for each CLI call (built-in PowerShell switch).
 
@@ -38,7 +45,10 @@
          (Interactive browser login -- run this once before the first script run.)
 #>
 [CmdletBinding()]
-param()
+param(
+    [Parameter()]
+    [string] $KnownNamespace = 'happyvessel61954'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -53,8 +63,9 @@ $capDir     = Join-Path $repoRoot 'driver' 'capabilities'
 $profileDir = Join-Path $repoRoot 'driver' 'profiles'
 $srcDir     = Join-Path $repoRoot 'driver' 'src'
 
-# The namespace that is currently baked into the driver source files.
-$knownNamespace = 'happyvessel61954'
+# The namespace currently baked into the driver source files (overridable via
+# the -KnownNamespace parameter).
+$knownNamespace = $KnownNamespace
 
 ###############################################################################
 # Prerequisite checks
