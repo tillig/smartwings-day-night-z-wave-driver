@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+﻿#Requires -Version 7.0
 <#
 .SYNOPSIS
     Creates (or verifies) the three custom SmartThings capabilities and their
@@ -58,10 +58,10 @@ $ErrorActionPreference = 'Stop'
 ###############################################################################
 
 # setup/ is one level below repo root; driver/ is a sibling of setup/.
-$repoRoot   = Split-Path -Parent $PSScriptRoot
-$capDir     = Join-Path $repoRoot 'driver' 'capabilities'
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$capDir = Join-Path $repoRoot 'driver' 'capabilities'
 $profileDir = Join-Path $repoRoot 'driver' 'profiles'
-$srcDir     = Join-Path $repoRoot 'driver' 'src'
+$srcDir = Join-Path $repoRoot 'driver' 'src'
 
 # The namespace currently baked into the driver source files (overridable via
 # the -KnownNamespace parameter).
@@ -130,12 +130,12 @@ function New-Capability {
     if ($createExitCode -ne 0) {
         $errText = $createOutput | Out-String
         if ($errText -match 'already exists|conflict|409' -or $errText -match '(?i)duplicate') {
-            Write-Host "  Capability already exists -- will look it up." -ForegroundColor DarkYellow
+            Write-Host '  Capability already exists -- will look it up.' -ForegroundColor DarkYellow
         }
         else {
             Write-Warning "  Create returned exit code $createExitCode. Output:"
             Write-Warning $errText
-            Write-Host "  Attempting to find existing capability by name anyway..." -ForegroundColor DarkYellow
+            Write-Host '  Attempting to find existing capability by name anyway...' -ForegroundColor DarkYellow
         }
     }
 
@@ -149,7 +149,7 @@ function New-Capability {
             Write-Host "  Created with ID: $capabilityId" -ForegroundColor Green
         }
         catch {
-            Write-Warning "  Could not parse create response as JSON; will try to find existing."
+            Write-Warning '  Could not parse create response as JSON; will try to find existing.'
         }
     }
 
@@ -160,7 +160,7 @@ function New-Capability {
         $capName = $capDef.name
 
         Write-Verbose "  Searching for existing capability named: $capName"
-        Write-Verbose "  Running: smartthings capabilities --json"
+        Write-Verbose '  Running: smartthings capabilities --json'
 
         $listOutput = smartthings capabilities --json 2>&1
         if ($LASTEXITCODE -ne 0) {
@@ -199,16 +199,16 @@ function New-Capability {
     if ($presExitCode -ne 0) {
         $presErr = $presOutput | Out-String
         if ($presErr -match 'already exists|conflict|409' -or $presErr -match '(?i)duplicate') {
-            Write-Host "  Presentation already exists -- skipping." -ForegroundColor DarkYellow
+            Write-Host '  Presentation already exists -- skipping.' -ForegroundColor DarkYellow
         }
         else {
             Write-Warning "  Presentation create returned exit code ${presExitCode}:"
             Write-Warning $presErr
-            Write-Host "  Continuing (presentation may already exist or may need manual creation)." -ForegroundColor DarkYellow
+            Write-Host '  Continuing (presentation may already exist or may need manual creation).' -ForegroundColor DarkYellow
         }
     }
     else {
-        Write-Host "  Presentation created." -ForegroundColor Green
+        Write-Host '  Presentation created.' -ForegroundColor Green
     }
 
     return $capabilityId
@@ -219,19 +219,19 @@ function New-Capability {
 ###############################################################################
 
 $activateSceneId = New-Capability `
-    -CapabilityJsonPath  (Join-Path $capDir 'activateScene.capability.json') `
+    -CapabilityJsonPath (Join-Path $capDir 'activateScene.capability.json') `
     -PresentationJsonPath (Join-Path $capDir 'activateScene.presentation.json') `
-    -FriendlyName        'activateScene'
+    -FriendlyName 'activateScene'
 
 $sheerLevelId = New-Capability `
-    -CapabilityJsonPath  (Join-Path $capDir 'sheerLevel.capability.json') `
+    -CapabilityJsonPath (Join-Path $capDir 'sheerLevel.capability.json') `
     -PresentationJsonPath (Join-Path $capDir 'sheerLevel.presentation.json') `
-    -FriendlyName        'sheerLevel'
+    -FriendlyName 'sheerLevel'
 
 $saveFavoriteId = New-Capability `
-    -CapabilityJsonPath  (Join-Path $capDir 'saveFavorite.capability.json') `
+    -CapabilityJsonPath (Join-Path $capDir 'saveFavorite.capability.json') `
     -PresentationJsonPath (Join-Path $capDir 'saveFavorite.presentation.json') `
-    -FriendlyName        'saveFavorite'
+    -FriendlyName 'saveFavorite'
 
 ###############################################################################
 # Namespace check: warn if the account namespace != what the driver hardcodes
@@ -250,7 +250,7 @@ foreach ($id in @($activateSceneId, $sheerLevelId, $saveFavoriteId)) {
 
 if (-not $detectedNamespace) {
     Write-Warning 'Could not detect the account namespace from the capability IDs.'
-    Write-Warning "Verify manually that driver/profiles/*.yml and driver/src/init.lua use the correct namespace."
+    Write-Warning 'Verify manually that driver/profiles/*.yml and driver/src/init.lua use the correct namespace.'
 }
 elseif ($detectedNamespace -eq $knownNamespace) {
     Write-Host "Namespace '$detectedNamespace' matches the value baked into the driver source. No changes needed." -ForegroundColor Green
@@ -273,7 +273,7 @@ Files to update (search/replace '$knownNamespace' -> '$detectedNamespace'):
     # Report every occurrence in profiles and src.
     $filesToUpdate = @(
         Join-Path $profileDir 'smartwings-daynight.yml'
-        Join-Path $srcDir     'init.lua'
+        Join-Path $srcDir 'init.lua'
     )
     foreach ($f in $filesToUpdate) {
         if (Test-Path $f) {
@@ -289,7 +289,7 @@ Files to update (search/replace '$knownNamespace' -> '$detectedNamespace'):
 
     Write-Host ''
     Write-Host 'To apply the fix automatically, re-run with the -Fix switch:' -ForegroundColor Yellow
-    Write-Host "    ./New-Capabilities.ps1 -Fix" -ForegroundColor Yellow
+    Write-Host '    ./New-Capabilities.ps1 -Fix' -ForegroundColor Yellow
     Write-Host '(Or do it manually with your editor / sed / VS Code Find & Replace.)'
     Write-Host ''
 }

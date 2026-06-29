@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+﻿#Requires -Version 7.0
 <#
 .SYNOPSIS
     One-command upgrade: package the latest driver and push it to your channel.
@@ -74,10 +74,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$repoRoot   = Split-Path -Parent $PSScriptRoot
-$driverDir  = Join-Path $repoRoot 'driver'
-$cacheDir   = Join-Path $PSScriptRoot '.local'
-$cacheFile  = Join-Path $cacheDir 'channel-id'
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$driverDir = Join-Path $repoRoot 'driver'
+$cacheDir = Join-Path $PSScriptRoot '.local'
+$cacheFile = Join-Path $cacheDir 'channel-id'
 
 Write-Host '=== SmartWings Day/Night: Update / Deploy ===' -ForegroundColor Cyan
 
@@ -115,7 +115,7 @@ if (-not (Test-Path (Join-Path $driverDir 'config.yml'))) {
 # --- Step 1: resolve the channel (cache -> ChannelId -> name -> create) ------
 Write-Host "`n=== Step 1: Channel ===" -ForegroundColor Cyan
 
-$channels  = $channelsJson | ConvertFrom-Json
+$channels = $channelsJson | ConvertFrom-Json
 $channelId = ''
 
 function Resolve-ChannelId([object]$channels, [string]$id) {
@@ -159,7 +159,7 @@ Could not resolve a channel.
 
 - No valid cached channel (setup/.local/channel-id), and
 - no -ChannelId given (or it wasn't one you own), and
-$(if ($ChannelName) { "- no channel named '$ChannelName' was found." } else { "- no -ChannelName was given." })
+$(if ($ChannelName) { "- no channel named '$ChannelName' was found." } else { '- no -ChannelName was given.' })
 
 Options:
   * First-time setup: ./Update.ps1 -ChannelName '<your channel>' [-CreateChannel]
@@ -183,7 +183,7 @@ $(($channels | ForEach-Object { "  $($_.name)  [$(if ($_.channelId) { $_.channel
         Set-Content -Path $tmp -Value $payload -Encoding utf8
         $createOut = smartthings edge:channels:create --input "$tmp" --json 2>&1
         if ($LASTEXITCODE -ne 0) { Write-Error "Failed to create channel:`n$($createOut | Out-String)" }
-        $created   = $createOut | ConvertFrom-Json
+        $created = $createOut | ConvertFrom-Json
         $channelId = if ($created.channelId) { $created.channelId } else { $created.id }
         Write-Host "Channel created. ID: $channelId" -ForegroundColor Green
     }
@@ -209,15 +209,15 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "Package/assign failed:`n$($pkgOut | Out-String)"
 }
 
-$result   = $null
+$result = $null
 try { $result = $pkgOut | ConvertFrom-Json } catch { }
 $driverId = if ($result) { if ($result.driverId) { $result.driverId } else { $result.id } } else { $null }
-$version  = if ($result) { $result.version } else { $null }
+$version = if ($result) { $result.version } else { $null }
 
 Write-Host "`n=== Done ===" -ForegroundColor Green
 Write-Host "  Channel ID : $channelId"
 if ($driverId) { Write-Host "  Driver ID  : $driverId" }
-if ($version)  { Write-Host "  Version    : $version" }
+if ($version) { Write-Host "  Version    : $version" }
 if ($HubId) {
     Write-Host "  Installed on hub: $HubId"
 }

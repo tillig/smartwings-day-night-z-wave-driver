@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+﻿#Requires -Version 7.0
 <#
 .SYNOPSIS
     Packages, assigns to a channel, and installs the SmartWings Day/Night
@@ -82,7 +82,7 @@ $ErrorActionPreference = 'Stop'
 # Paths
 ###############################################################################
 
-$repoRoot  = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Parent $PSScriptRoot
 $driverDir = Join-Path $repoRoot 'driver'
 
 ###############################################################################
@@ -143,9 +143,9 @@ else {
     # Build the JSON payload. The `type` field is REQUIRED (omitting it causes a
     # 400 "Channel type must be provided" error from the API).
     $channelPayload = [pscustomobject]@{
-        name        = $ChannelName
-        description = $ChannelDescription
-        type        = 'DRIVER'
+        name              = $ChannelName
+        description       = $ChannelDescription
+        type              = 'DRIVER'
         termsOfServiceUrl = ''
     } | ConvertTo-Json -Compress
 
@@ -159,13 +159,13 @@ else {
         Write-Verbose "Running: smartthings edge:channels:create --input `"$tmpPayload`" --json"
 
         $createOutput = smartthings edge:channels:create --input "$tmpPayload" --json 2>&1
-        $createExit   = $LASTEXITCODE
+        $createExit = $LASTEXITCODE
 
         if ($createExit -ne 0) {
             Write-Error "Failed to create channel (exit $createExit):`n$($createOutput | Out-String)"
         }
 
-        $channel   = $createOutput | ConvertFrom-Json
+        $channel = $createOutput | ConvertFrom-Json
         $ChannelId = $channel.channelId
         if (-not $ChannelId) {
             # Some CLI versions return 'id' instead of 'channelId'.
@@ -176,7 +176,7 @@ else {
         }
 
         Write-Host "Channel created. ID: $ChannelId" -ForegroundColor Green
-        Write-Host "(Record this ID; pass it as -ChannelId on future installs to skip re-creation.)" -ForegroundColor DarkYellow
+        Write-Host '(Record this ID; pass it as -ChannelId on future installs to skip re-creation.)' -ForegroundColor DarkYellow
     }
     finally {
         if (Test-Path $tmpPayload) { Remove-Item $tmpPayload -Force }
@@ -201,7 +201,7 @@ if ($HubId) { $pkgArgs += @('--hub', $HubId) }
 Write-Verbose "Running: smartthings edge:drivers:package $($pkgArgs -join ' ') --json"
 
 $pkgOutput = smartthings edge:drivers:package @pkgArgs --json 2>&1
-$pkgExit   = $LASTEXITCODE
+$pkgExit = $LASTEXITCODE
 
 if ($pkgExit -ne 0) {
     Write-Error "Driver package/assign/install failed (exit $pkgExit):`n$($pkgOutput | Out-String)"
@@ -219,7 +219,7 @@ catch {
 if ($driverResult) {
     $driverId = $driverResult.driverId
     if (-not $driverId) { $driverId = $driverResult.id }
-    Write-Host "Driver packaged and installed successfully." -ForegroundColor Green
+    Write-Host 'Driver packaged and installed successfully.' -ForegroundColor Green
     if ($driverId) {
         Write-Host "  Driver ID: $driverId" -ForegroundColor Green
     }
