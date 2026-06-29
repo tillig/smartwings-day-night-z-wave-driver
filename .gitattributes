@@ -1,0 +1,13 @@
+*        text=auto
+
+*.jpg    binary
+*.png    binary
+*.gif    binary
+
+*.json   text
+*.lua    text
+*.md     text
+*.ps1    text
+*.psd1   text
+*.yaml   text
+*.yml    text
