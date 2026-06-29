@@ -1,7 +1,23 @@
 {
-  "dashboard": { "states": [], "actions": [] },
+  "automation": {
+    "actions": [
+    ],
+    "conditions": [
+    ]
+  },
+  "dashboard": {
+    "actions": [
+    ],
+    "states": [
+    ]
+  },
   "detailView": [
-    { "label": "Save current as Favorite", "displayType": "pushButton", "pushButton": { "command": "save" } }
-  ],
-  "automation": { "conditions": [], "actions": [] }
+    {
+      "displayType": "pushButton",
+      "label": "Save current as Favorite",
+      "pushButton": {
+        "command": "save"
+      }
+    }
+  ]
 }

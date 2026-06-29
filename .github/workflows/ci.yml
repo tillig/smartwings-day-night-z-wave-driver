@@ -6,7 +6,7 @@
 #
 # Releasing (uploading to a channel) is intentionally NOT done in CI — SmartThings
 # has no long-lived API token (PATs expire in 24h), so releases are a local step.
-# See setup/Release-Driver.ps1 and CONTRIBUTING.md.
+# See setup/Update.ps1 and CONTRIBUTING.md.
 
 name: CI
 
@@ -17,58 +17,36 @@ on:
     branches: [main]
 
 jobs:
-  # ── Lua lint + syntax check ────────────────────────────────────────────────
-  lua-lint:
-    name: Lua lint (luacheck + luac)
+  # All linting (including Lua) runs through pre-commit so the hooks are the
+  # single source of truth — the same checks run locally and in CI.
+  pre-commit:
+    name: pre-commit (lint + Lua)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Install Lua 5.3 + LuaRocks via the standard marketplace actions.
+      # Lua + luacheck so the luac-syntax-check and luacheck hooks can run.
       - uses: leafo/gh-actions-lua@v10
         with:
           luaVersion: "5.3"
-
       - uses: leafo/gh-actions-luarocks@v4
-
       - name: Install luacheck
         run: luarocks install luacheck
-
-      - name: luac syntax check
-        run: |
-          find driver/src -name "*.lua" -print0 \
-            | xargs -0 -I{} luac -p {}
-
-      - name: luacheck
-        run: luacheck --config .luacheckrc driver/src/
-
-  # ── pre-commit (JSON / YAML / Markdown / trailing-whitespace) ─────────────
-  pre-commit:
-    name: pre-commit hooks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-
       - name: Install pre-commit
         run: pip install pre-commit
 
-      - name: Run pre-commit on all files
-        # --all-files runs every hook against every file.  Hooks that auto-fix
-        # (markdownlint --fix, json-sort --autofix) will modify files and then
-        # pre-commit exits non-zero, causing CI to fail — exactly the right
-        # behaviour: "files need formatting, please run pre-commit locally."
-        #
-        # The local luacheck/luac hooks require system binaries that are not
-        # available in this job, so we skip them here (they run in lua-lint).
-        run: SKIP=luacheck,luac-syntax-check pre-commit run --all-files
+      # Run every hook against every file. Auto-fixing hooks (markdownlint,
+      # json-sort) modify files and exit non-zero if anything changed — i.e. CI
+      # fails with "run pre-commit locally," which is the desired behaviour.
+      - name: Run pre-commit
+        run: pre-commit run --all-files
 
-  # ── SmartThings driver package validation ─────────────────────────────────
   package:
-    name: Driver package (smartthings edge:drivers:package)
+    name: Driver package (build only)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -1,6 +1,13 @@
 {
+  "attributes": {
+  },
+  "commands": {
+    "save": {
+      "arguments": [
+      ],
+      "name": "save"
+    }
+  },
   "name": "Save Favorite",
-  "status": "proposed",
-  "attributes": {},
-  "commands": { "save": { "name": "save", "arguments": [] } }
+  "status": "proposed"
 }

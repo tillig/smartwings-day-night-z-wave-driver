@@ -1,119 +1,67 @@
 # Setup Scripts
 
-PowerShell automation for setting up the SmartWings Day/Night Z-Wave driver on
-a SmartThings account. These scripts replace the manual CLI steps.
+PowerShell automation for installing and updating the SmartWings Day/Night
+Z-Wave driver. These scripts replace the manual SmartThings CLI steps.
+
+- [Prerequisites](#prerequisites)
+- [First-Time Setup](#first-time-setup)
+- [Deploying Updates](#deploying-updates)
+- [Scripts](#scripts)
+- [Namespace Warning](#namespace-warning)
 
 ## Prerequisites
 
-1. **Node.js + npm** are installed.
-2. **SmartThings CLI** is installed:
-   ```
-   npm install -g @smartthings/cli
-   ```
-3. **Log in once** (interactive browser; token is cached afterward):
-   ```
-   smartthings login
-   ```
-4. **Your hub ID.** Find it with:
-   ```
-   smartthings edge:hubs
-   ```
-
-## Quick Start (fresh account / first-time setup)
+Install the SmartThings CLI and log in once (interactive browser; the token is
+cached and auto-refreshed afterward), then find your hub ID:
 
 ```powershell
-cd setup
-./Setup.ps1 -HubId '<your-hub-id>'
+npm install -g @smartthings/cli
+smartthings login
+smartthings edge:hubs   # note your hub ID
 ```
 
-That single command:
-1. Creates the three custom SmartThings capabilities and their presentations.
-2. Creates a new Edge channel (type `DRIVER`).
-3. Packages the driver, assigns it to the channel, and installs it on the hub.
+## First-Time Setup
 
-## Re-installing After a Code Change
-
-If you already have a channel and just want to push an updated driver build:
+From the repo root, one command creates the custom capabilities, creates an Edge
+channel, and packages + installs the driver on your hub:
 
 ```powershell
-./Install-Driver.ps1 `
-    -HubId     '<your-hub-id>' `
-    -ChannelId '<your-channel-id>'
+./setup/Setup.ps1 -HubId '<your-hub-id>'
+```
+
+Then, in the SmartThings app, assign the driver to your shade (Device → **⋮** →
+**Driver** → **SmartWings Day/Night Z-Wave**) and delete the two leftover junk
+child devices from the stock driver.
+
+## Deploying Updates
+
+After a code change, push a new build with `Update.ps1`. It remembers your
+channel after the first run, so routine upgrades take no arguments:
+
+```powershell
+# First time — name your channel (it gets cached):
+./setup/Update.ps1 -ChannelName '<your-channel-name>'
+
+# Every time after that:
+./setup/Update.ps1
 ```
 
 ## Scripts
 
-| Script | What it does |
-|---|---|
-| `Setup.ps1` | Orchestrator: runs `New-Capabilities.ps1` then `Install-Driver.ps1`. Use for first-time setup. |
-| `New-Capabilities.ps1` | Creates (or verifies) the 3 custom capabilities + presentations. Warns if the account namespace differs from what the driver source hardcodes. |
-| `Install-Driver.ps1` | Creates-or-uses an Edge channel, packages the driver, assigns it to the channel, and installs it on the hub. |
+| Script | What It Does |
+| --- | --- |
+| `Setup.ps1` | First-time orchestrator: runs `New-Capabilities.ps1` then `Install-Driver.ps1`. |
+| `New-Capabilities.ps1` | Creates (or verifies) the three custom capabilities and presentations. Warns if your account namespace differs from the one hardcoded in the driver. |
+| `Install-Driver.ps1` | Creates-or-uses a channel, then packages and assigns the driver (and installs on a hub when `-HubId` is given). |
+| `Update.ps1` | Everyday deploy: resolves the channel (cached, by `-ChannelName`, or `-CreateChannel`), then packages and assigns the latest build. |
 
-All scripts accept `-Verbose` for detailed output and `-WhatIf` / `-Confirm` is
-not needed (no destructive operations).
-
-## Parameters
-
-### `Setup.ps1` / `Install-Driver.ps1`
-
-| Parameter | Required | Description |
-|---|---|---|
-| `-HubId` | Yes | SmartThings hub ID. Find with `smartthings edge:hubs`. |
-| `-ChannelId` | No | Existing Edge channel ID. If omitted, a new channel is created. |
-| `-ChannelName` | No | Name for a new channel. Default: `SmartWings Day/Night Z-Wave`. |
-| `-ChannelDescription` | No | Description for a new channel. Has a sensible default. |
-
-### `New-Capabilities.ps1`
-
-No parameters beyond the built-in `-Verbose`.
+All scripts accept `-Verbose`. Run `Get-Help ./setup/<script>.ps1 -Detailed` for
+full parameter documentation.
 
 ## Namespace Warning
 
-SmartThings assigns a per-account namespace to custom capabilities
-(e.g. `happyvessel61954`). The driver source hardcodes `happyvessel61954` in:
-
-- `driver/profiles/smartwings-daynight.yml`
-- `driver/src/init.lua`
-
-If your account receives a different namespace, `New-Capabilities.ps1` will
-print a warning that lists every line that needs updating. Update those files
-before packaging the driver (before running `Install-Driver.ps1`).
-
-## Example Session
-
-```text
-$ smartthings edge:hubs
-# -> note your hub ID
-
-$ cd setup
-$ ./Setup.ps1 -HubId '00000000-0000-0000-0000-00000000HUB0'
-
-########################################################
-#   SmartWings Day/Night Z-Wave -- Full Setup           #
-########################################################
-
->>> Step 1/2: Creating custom capabilities...
-=== SmartWings Day/Night: Create Custom Capabilities ===
-Checking SmartThings authentication...
-
---- Capability: activateScene ---
-  Creating capability from: .../driver/capabilities/activateScene.capability.json
-  Created with ID: mynamespace12345.activateScene
-  Creating presentation from: .../driver/capabilities/activateScene.presentation.json
-  Presentation created.
-
-... (sheerLevel and saveFavorite follow) ...
-
-=== Namespace Verification ===
-*** NAMESPACE MISMATCH ***
-Your SmartThings account was assigned namespace : mynamespace12345
-The driver source currently hardcodes namespace : happyvessel61954
-...
-
-# -> Update driver/profiles/smartwings-daynight.yml and driver/src/init.lua,
-#    then re-run or continue:
-
->>> Step 2/2: Packaging and installing driver...
-...
-Installation complete.
-```
+SmartThings assigns a per-account namespace to custom capabilities (e.g.
+`happyvessel61954`), and the driver source hardcodes that prefix in
+`driver/profiles/smartwings-daynight.yml` and `driver/src/init.lua`. If your
+account receives a different namespace, `New-Capabilities.ps1` prints a warning
+listing every line to update. Update those files before packaging the driver.

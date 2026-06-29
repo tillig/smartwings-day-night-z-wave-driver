@@ -1,44 +1,27 @@
 # Contributing
 
-## Repo layout
+- [Repo Layout](#repo-layout)
+- [Coordinate Model](#coordinate-model)
+- [Custom Capabilities](#custom-capabilities)
+- [Development Workflow](#development-workflow)
+- [Scenes and State](#scenes-and-state)
+- [Child "Sheer" Device](#child-sheer-device)
+- [Why the Shade and Sheer Controls Look Different](#why-the-shade-and-sheer-controls-look-different)
+- [Z-Wave Details](#z-wave-details)
 
-```
-smartwings-day-night-z-wave-driver/
-├── driver/
-│   ├── config.yml                  # Driver metadata (name, packageKey, permissions)
-│   ├── fingerprints.yml            # Z-Wave device matching rules
-│   ├── profiles/
-│   │   ├── smartwings-daynight.yml         # Main profile (the real device)
-│   │   ├── smartwings-sheer.yml            # Child "Sheer" device profile
-│   │   └── smartwings-daynight-diagnostic.yml  # UNUSED — kept for troubleshooting
-│   ├── src/
-│   │   └── init.lua                # All driver logic (~530 lines)
-│   └── capabilities/
-│       ├── activateScene.capability.json   # "Apply selected mode" button
-│       ├── activateScene.presentation.json
-│       ├── sheerLevel.capability.json      # 0–100% sheer slider
-│       ├── sheerLevel.presentation.json
-│       ├── saveFavorite.capability.json    # "Save current as Favorite" button
-│       └── saveFavorite.presentation.json
-├── assets/
-│   └── smartwings-z-wave-programming-guide.pdf
-├── setup/                          # PowerShell install automation
-└── .github/                        # CI/CD
-```
+## Repo Layout
 
-### Key files
+- **`driver/`** — the Edge driver package uploaded to SmartThings.
+  - `config.yml` — driver metadata. The only supported keys are `name`, `packageKey`, `permissions`, `description`, and `vendorSupportInformation`.
+  - `fingerprints.yml` — claims Z-Wave `manufacturerId 0x045A` / `productType 0x0004` / `productId 0x0509` and maps it to the `smartwings-daynight` profile.
+  - `profiles/` — device profiles. `smartwings-daynight` is the real device; `smartwings-sheer` is the child "Sheer" device; `smartwings-daynight-diagnostic` is unused but kept for hardware debugging (two raw motor sliders).
+  - `src/init.lua` — all driver logic: component↔endpoint mapping, coordinate math, scene handling, child-device management, Z-Wave report handling, and capability command handlers.
+  - `capabilities/` — source JSON for the custom capabilities (a `.capability.json` and `.presentation.json` per capability).
+- **`setup/`** — PowerShell automation for installing and updating the driver.
+- **`assets/`** — the SmartWings Z-Wave programming guide PDF.
+- **`.github/`** — CI workflow.
 
-**`driver/config.yml`** — Driver name, `packageKey`, Z-Wave permission, and support URL. The supported top-level keys are `name`, `packageKey`, `permissions`, `description`, and `vendorSupportInformation`.
-
-**`driver/fingerprints.yml`** — Claims Z-Wave `manufacturerId 0x045A` / `productType 0x0004` / `productId 0x0509` → profile `smartwings-daynight`.
-
-**`driver/profiles/smartwings-daynight-diagnostic.yml`** — An old diagnostic profile with two raw motor sliders (Motor A / Motor B). Not used in normal operation; keep it around for hardware debugging.
-
-**`driver/src/init.lua`** — Contains all logic: component↔endpoint mapping, coordinate math, scene handling, child device management, Z-Wave report handling, and all capability command handlers.
-
----
-
-## Coordinate model
+## Coordinate Model
 
 The firmware uses a single vertical scale: **value = rail HEIGHT**, 0 = window bottom, 100 = window top. Higher = more open.
 
@@ -47,92 +30,42 @@ The firmware uses a single vertical scale: **value = rail HEIGHT**, 0 = window b
 - **Sheer%** displayed = `100 - middle_height`
 - **Hard rule:** `middle >= bottom` (firmware-enforced; the driver orders the two motor commands and staggers them by ~2.5 s so both motors run simultaneously without the firmware rejecting a cross)
 
-The two `FIELD_MIDDLE` / `FIELD_BOTTOM` device fields are the single source of truth for coupling math — the driver never reads back through the inverted sheer display value.
+The `FIELD_MIDDLE` / `FIELD_BOTTOM` device fields are the single source of truth for coupling math — the driver never reads back through the inverted sheer display value.
 
----
+## Custom Capabilities
 
-## Custom capabilities
-
-The driver uses three custom capabilities:
+The driver uses three custom capabilities, which live in the SmartThings account (not in the driver package):
 
 | Capability | ID | Purpose |
-|------------|----|---------|
+| --- | --- | --- |
 | Sheer Level | `<namespace>.sheerLevel` | 0–100% slider for the middle rail |
 | Activate Scene | `<namespace>.activateScene` | Stateless "Apply selected mode" push button |
 | Save Favorite | `<namespace>.saveFavorite` | Stateless "Save current as Favorite" push button |
 
-Custom capabilities live in the SmartThings account, not in the driver package. They are created with the CLI:
+Create them with the CLI (or `setup/New-Capabilities.ps1`, which does all three):
 
-```sh
+```powershell
 smartthings capabilities:create -i driver/capabilities/<name>.capability.json
-smartthings capabilities:presentation:create <capabilityId> \
-  -i driver/capabilities/<name>.presentation.json
+smartthings capabilities:presentation:create <capabilityId> -i driver/capabilities/<name>.presentation.json
 ```
 
-The resulting ID takes the form `<accountNamespace>.<name>` (e.g. `happyvessel61954.sheerLevel`).
+The resulting ID takes the form `<accountNamespace>.<name>` (e.g. `happyvessel61954.sheerLevel`). The namespace is assigned per SmartThings account, and `driver/profiles/smartwings-daynight.yml` and `driver/src/init.lua` hardcode the prefix `happyvessel61954.`. **To run this on a different account**, find your namespace (`smartthings capabilities:namespaces`), then find-and-replace `happyvessel61954.` with it in those two files before packaging.
 
-### Namespace prefix: the main fork gotcha
+## Development Workflow
 
-The profiles (`driver/profiles/smartwings-daynight.yml`) and `driver/src/init.lua` hardcode the namespace prefix `happyvessel61954.`. On a different SmartThings account the namespace will be different. To use this driver on another account:
+Prerequisites: the [SmartThings CLI](https://github.com/SmartThingsCommunity/smartthings-cli) (`npm install -g @smartthings/cli`), and Lua + [luacheck](https://github.com/lunarmodules/luacheck) for linting.
 
-1. Find your namespace: `smartthings capabilities:namespaces` (or `smartthings capabilities` to list capabilities and read the prefix off any of them).
-2. Find and replace `happyvessel61954.` with your namespace in:
-   - `driver/profiles/smartwings-daynight.yml`
-   - `driver/src/init.lua`
-3. Re-create the capabilities under your account (steps above), then re-deploy the driver.
+Lint and validate (the same checks CI runs):
 
----
+```powershell
+# Lint + syntax check (Lua, JSON, YAML, Markdown) via the pre-commit hooks
+pre-commit run --all-files
 
-## Development workflow
-
-### Prerequisites
-
-- [`lua`/`luac`](https://www.lua.org/) for syntax checking: `brew install lua`
-- [`luacheck`](https://github.com/lunarmodules/luacheck) for linting (see note below): `luarocks install luacheck`
-- [SmartThings CLI](https://github.com/SmartThingsCommunity/smartthings-cli): `npm install -g @smartthings/cli`
-
-### Syntax check
-
-```sh
-luac -p driver/src/init.lua
-```
-
-No output = clean. This catches Lua syntax errors before deploying to the hub. `luac -p` works under any Lua version.
-
-### Lint
-
-```sh
-luacheck driver/src/init.lua    # uses .luacheckrc
-```
-
-This is also run in CI and via the `luacheck` pre-commit hook.
-
-> **luacheck needs Lua 5.4 — not 5.5.** The current luacheck release (1.2.0) cannot run under Lua 5.5 (its own code fails to load). This is an upstream gap, not a project issue, and will resolve when luacheck adds 5.5 support. If your default `lua` is 5.5, install Lua 5.4 (`brew install lua@5.4`) and install luacheck against it (`luarocks install luacheck`); the resulting wrapper at `~/.luarocks/bin/luacheck` is bound to 5.4. Put `~/.luarocks/bin` ahead on your `PATH` so `luacheck` resolves to it:
->
-> ```sh
-> export PATH="$HOME/.luarocks/bin:$PATH"
-> ```
->
-> CI is unaffected — it pins its own Lua version.
-
-### Build / validate (dry run)
-
-```sh
+# Validate the driver packages cleanly — no upload, no auth
 smartthings edge:drivers:package driver --build-only out.zip
 ```
 
-Packages the driver and validates the YAML/JSON **without uploading and without
-any authentication**. This is exactly what CI runs on every push/PR.
-
-### Deploy / release
-
-Releases are a **local** step — there is no CI upload. SmartThings has no
-long-lived API token (personal access tokens expire after 24 hours), so
-automating channel uploads in CI is impractical. Use the local CLI login
-(`smartthings login`, which auto-refreshes).
-
-The simplest path is `setup/Update.ps1`, which resolves your channel (cached
-after the first run) and packages + assigns the driver:
+Deploy a new build. Releases are a **local** step — there is no CI upload, because SmartThings has no long-lived API token (PATs expire after 24 hours). The simplest path is `setup/Update.ps1`, which resolves your channel (cached after the first run) and packages + assigns the driver:
 
 ```powershell
 # First time — point it at your channel by name (then it's cached):
@@ -142,75 +75,42 @@ after the first run) and packages + assigns the driver:
 ./setup/Update.ps1
 ```
 
-Or invoke the CLI directly:
+After deploying, **Lua-only changes** hot-reload on the hub automatically, but **profile changes** (adding/removing components or capabilities) require re-selecting the driver in the SmartThings app (Device → **⋮** → **Driver** → re-select **SmartWings Day/Night Z-Wave**) before the new layout appears.
 
-```sh
-smartthings edge:drivers:package driver --channel <channelId> [--hub <hubId>]
-```
+To watch hub logs while testing: `smartthings edge:drivers:logcat <driverId> --hub-address <hub-ip>`. The connection is flaky and typically drops after 1–2 minutes, so use short bursts.
 
-Re-running re-uploads the driver. Notes:
+> **luacheck needs Lua 5.4, not 5.5.** The current luacheck release (1.2.0) cannot run under Lua 5.5 — an upstream gap that will resolve when luacheck adds 5.5 support. If your default `lua` is 5.5, install Lua 5.4 (`brew install lua@5.4`), install luacheck against it (`luarocks install luacheck`), and put `~/.luarocks/bin` ahead on your `PATH`. CI is unaffected — it pins its own Lua version.
 
-- **Lua-only changes** hot-reload on the hub without requiring any action in the app.
-- **Profile changes** (adding/removing components or capabilities) may require re-selecting the driver in the SmartThings app (Device → **⋮** → **Driver** → re-select **SmartWings Day/Night Z-Wave**) before the new layout appears.
-
-### Watch logs
-
-```sh
-smartthings edge:drivers:logcat <driverId> --hub-address <hub-ip>
-```
-
-The `logcat` connection is flaky and typically drops after 1–2 minutes. Use short observation bursts rather than leaving it running.
-
-### Re-selecting the driver after a profile change
-
-1. Open the SmartThings app.
-2. Go to the shade device → **⋮** (three dots) → **Driver**.
-3. Select **SmartWings Day/Night Z-Wave**.
-
----
-
-## Scenes and state
+## Scenes and State
 
 Scenes are stored as rail heights `{middle, bottom}`:
 
-| Scene | Middle height | Bottom height |
-|-------|--------------|---------------|
+| Scene | Middle Height | Bottom Height |
+| --- | --- | --- |
 | Blackout | 100 | 0 |
 | Sheer | 0 | 0 |
 | Open | 100 | 100 |
 | Favorite | persisted per device | persisted per device |
 
-The Favorite defaults to `{middle: 76, bottom: 0}` (sheer ~24%) until the user saves their own with "Save current as Favorite".
+The Favorite defaults to `{middle: 76, bottom: 0}` (sheer ~24%) until the user saves their own with "Save current as Favorite". The Scene component uses the standard `mode` capability for the dropdown; because the true state is two rail heights (not an enum), the displayed mode reflects the named preset the rails currently sit on, or the last-invoked scene otherwise.
 
-The Scene component uses the standard `mode` capability to display the dropdown. Because the true state is two rail heights (not an enum), the displayed mode reflects the named preset the rails currently sit on — or the last-invoked scene otherwise.
+## Child "Sheer" Device
 
----
+On first init the driver creates a child device named `<shade name> Sheer` using the `smartwings-sheer` profile. This exposes the middle rail as an ordinary `windowShade` so Google Home picks it up as a second blind with full voice control ("open the sheer", "set the sheer to 50%"). It stays in sync via `sync_sheer_child()` whenever the parent receives a Z-Wave report for the middle rail.
 
-## Child "Sheer" device
+## Why the Shade and Sheer Controls Look Different
 
-On first init, the driver automatically creates a child device named `<shade name> Sheer` using the `smartwings-sheer` profile. This exposes the middle rail as an ordinary `windowShade` so Google Home picks it up as a second blind with full voice control ("open the sheer", "set the sheer to 50%").
+The **Shade** (bottom rail) uses the stock `windowShade` capability — the combined tile with Open/Close/Pause buttons and a draggable percentage bar. The **Sheer** (middle rail) uses the custom `sheerLevel` slider. This asymmetry is deliberate, for two reasons:
 
-The child device is kept in sync by `sync_sheer_child()` every time the parent receives a Z-Wave report for the middle rail.
+1. **Voice control.** `windowShade` is a standard capability that Google Home / Alexa map to their blind/openable traits, enabling "open/close/set to N%" by voice. Custom capabilities like `sheerLevel` are not exposed to voice assistants — which is why the sheer rail also gets its own child `windowShade` device for voice.
+2. **Inverted semantics.** The sheer value is inverted relative to rail height (`sheer% = 100 − middle`). Driving that through the stock `windowShade` / `windowShadeLevel` pair fought the platform's built-in shade-vs-level linkage and left the displayed value wedged. A custom slider avoids that.
 
----
+So: stock `windowShade` where voice and standard behavior matter (the opaque shade), custom slider where clean inverted control matters (the in-app sheer). Unifying the look would break one or both.
 
-## Why the Shade and Sheer controls look different in the app
-
-The **Shade** (bottom rail) uses the stock `windowShade` capability — the combined tile with Open/Close/Pause buttons and a draggable percentage bar. The **Sheer** (middle rail) uses the custom `sheerLevel` slider.
-
-This asymmetry is deliberate, for two reasons:
-
-1. **Voice control.** `windowShade` is a standard capability that Google Home / Alexa map to their blind/openable traits, enabling "open/close/set to N%" by voice. Custom capabilities like `sheerLevel` are not exposed to voice assistants — which is exactly why the Sheer rail also gets its own child `windowShade` device (above) for voice.
-2. **Inverted semantics.** The sheer value is inverted relative to rail height (`sheer% = 100 − middle`). Driving that through the stock `windowShade`/`windowShadeLevel` pair fought the platform's built-in shade-vs-level linkage and left the displayed value wedged. A custom slider we fully control avoids that.
-
-So: stock `windowShade` where voice + standard behavior matter (the opaque shade), custom slider where we need clean inverted control (the in-app sheer). Don't "unify" the look — it would break one or both.
-
----
-
-## Z-Wave details
+## Z-Wave Details
 
 - **ManufacturerId:** `0x045A` (1114)
 - **ProductType:** `0x0004` (4)
 - **ProductId:** `0x0509` (1289)
 - **Command class:** `SWITCH_MULTILEVEL` v4, one SET/GET/REPORT per endpoint
-- **Wire scale:** 0–99 (99 = 100%); `to_wire()` / `from_wire()` convert to/from the 0–100 SmartThings scale
+- **Wire scale:** 0–99 (99 = 100%); `to_wire()` / `from_wire()` convert to and from the 0–100 SmartThings scale

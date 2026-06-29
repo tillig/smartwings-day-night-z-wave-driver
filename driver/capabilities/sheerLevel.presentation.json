@@ -1,26 +1,43 @@
 {
-  "dashboard": { "states": [], "actions": [] },
-  "detailView": [
-    {
-      "label": "Sheer amount",
-      "displayType": "slider",
-      "slider": {
-        "range": [0, 100],
-        "step": 1,
-        "unit": "sheerLevel.unit",
-        "value": "sheerLevel.value",
-        "command": "setSheerLevel"
-      }
-    }
-  ],
   "automation": {
+    "actions": [
+    ],
     "conditions": [
       {
-        "label": "Sheer amount",
         "displayType": "slider",
-        "slider": { "range": [0, 100], "step": 1, "unit": "sheerLevel.unit", "value": "sheerLevel.value" }
+        "label": "Sheer amount",
+        "slider": {
+          "range": [
+            0,
+            100
+          ],
+          "step": 1,
+          "unit": "sheerLevel.unit",
+          "value": "sheerLevel.value"
+        }
       }
+    ]
+  },
+  "dashboard": {
+    "actions": [
     ],
-    "actions": []
-  }
+    "states": [
+    ]
+  },
+  "detailView": [
+    {
+      "displayType": "slider",
+      "label": "Sheer amount",
+      "slider": {
+        "command": "setSheerLevel",
+        "range": [
+          0,
+          100
+        ],
+        "step": 1,
+        "unit": "sheerLevel.unit",
+        "value": "sheerLevel.value"
+      }
+    }
+  ]
 }

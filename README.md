@@ -4,11 +4,25 @@ A SmartThings Edge driver (Lua, runs on the hub) for [SmartWings day/night cellu
 
 **Not published to any SmartThings channel marketplace. Personal-use, MIT-licensed.**
 
+- [How It Works](#how-it-works)
+- [What You See in the App](#what-you-see-in-the-app)
+  - [Scene Modes](#scene-modes)
+  - [Why the Shade and Sheer Controls Look Different](#why-the-shade-and-sheer-controls-look-different)
+- [Voice Control (Google Home)](#voice-control-google-home)
+- [Install](#install)
+  - [Prerequisites](#prerequisites)
+  - [Option A — Setup Scripts (Recommended)](#option-a--setup-scripts-recommended)
+  - [Option B — Manual Install](#option-b--manual-install)
+  - [Custom Capabilities Caveat](#custom-capabilities-caveat)
+- [FAQ](#faq)
+- [History](#history)
+- [Reference](#reference)
+
 ## How It Works
 
 The shade splits the window into three bands:
 
-```
+```text
 ┌──────────────────────────┐  ← window top
 │  sheer fabric            │
 │    (middle rail)         │
@@ -28,38 +42,38 @@ The two motors share one Z-Wave node (two multichannel endpoints). The stock dri
 
 The device detail screen has four sections, in order:
 
-| Section | What it is | What it controls |
-|---------|-----------|-----------------|
-| **Sheer** | Slider (0–100%) | Middle rail. 0% = no sheer (middle up), 100% = full sheer (middle down) |
-| **Shade** | Window shade tile with Open/Close/Pause + % | Bottom rail. 0% = closed/covered, 100% = open/see-through |
-| **Scene** | Mode dropdown + buttons | Preset positions for both rails at once |
-| **Battery** | Battery level | — |
+| Section     | What it is                                  | What it controls                                                        |
+| ----------- | ------------------------------------------- | ----------------------------------------------------------------------- |
+| **Sheer**   | Slider (0–100%)                             | Middle rail. 0% = no sheer (middle up), 100% = full sheer (middle down) |
+| **Shade**   | Window shade tile with Open/Close/Pause + % | Bottom rail. 0% = closed/covered, 100% = open/see-through               |
+| **Scene**   | Mode dropdown + buttons                     | Preset positions for both rails at once                                 |
+| **Battery** | Battery level                               | —                                                                       |
 
-### Scene modes
+### Scene Modes
 
-| Mode | Position |
-|------|----------|
-| **Blackout** | Middle up, bottom down — maximum privacy |
-| **Sheer** | Both rails down — full sheer fabric visible |
-| **Open** | Both rails up — fully open, see-through |
-| **Favorite** | Your saved position |
+| Mode         | Position                                    |
+| ------------ | ------------------------------------------- |
+| **Blackout** | Middle up, bottom down — maximum privacy    |
+| **Sheer**    | Both rails down — full sheer fabric visible |
+| **Open**     | Both rails up — fully open, see-through     |
+| **Favorite** | Your saved position                         |
 
 **Apply selected mode** re-fires the currently selected mode. This matters because the dropdown is stateful — re-selecting an already-selected mode won't re-trigger it; the button always fires.
 
 **Save current as Favorite** captures wherever both rails are right now.
 
-### Why the Shade and Sheer controls look different
+### Why the Shade and Sheer Controls Look Different
 
 You'll notice the **Shade** control (with Open/Close buttons and a percentage bar) looks different from the clean **Sheer** slider. That's on purpose: the Shade control is built the specific way that lets Google Home and Alexa recognize it as a real blind, so voice commands like "open the blinds" or "set the blinds to 50%" work. Making the two look identical would break that. It's a small cosmetic quirk in exchange for working voice control. (For the technical details, see [CONTRIBUTING.md](./CONTRIBUTING.md).)
 
 ## Voice Control (Google Home)
 
-Verified working. The driver creates two devices in Google Home:
+The driver creates two devices in Google Home:
 
-| Google Home device | Voice examples | Controls |
-|-------------------|----------------|----------|
-| `<your shade name>` | "open the blinds", "close the blinds", "set the blinds to 50%" | Bottom rail (opaque shade) |
-| `<your shade name> Sheer` | "open the sheer", "set the sheer to 50%" | Middle rail (sheer fabric) |
+| Google Home device        | Voice examples                                                 | Controls                   |
+| ------------------------- | -------------------------------------------------------------- | -------------------------- |
+| `<your shade name>`       | "open the blinds", "close the blinds", "set the blinds to 50%" | Bottom rail (opaque shade) |
+| `<your shade name> Sheer` | "open the sheer", "set the sheer to 50%"                       | Middle rail (sheer fabric) |
 
 For scenes/Favorite: create SmartThings Scenes (Google Home exposes those as voice commands).
 
@@ -71,12 +85,12 @@ For scenes/Favorite: create SmartThings Scenes (Google Home exposes those as voi
 - The shade already paired to SmartThings (it pairs as a standard Z-Wave device)
 - [SmartThings CLI](https://github.com/SmartThingsCommunity/smartthings-cli) installed and logged in:
 
-  ```sh
+  ```powershell
   npm install -g @smartthings/cli
   smartthings login
   ```
 
-### Option A — Setup scripts (recommended)
+### Option A — Setup Scripts (Recommended)
 
 The `setup/` directory contains PowerShell scripts that automate everything (creating custom capabilities, creating a channel, and installing the driver):
 
@@ -93,11 +107,11 @@ The `setup/` directory contains PowerShell scripts that automate everything (cre
 
 It remembers your channel after the first run, so upgrades are a single command with no arguments.
 
-### Option B — Manual install
+### Option B — Manual Install
 
 1. Create the three custom capabilities from `driver/capabilities/`:
 
-   ```sh
+   ```powershell
    smartthings capabilities:create -i driver/capabilities/activateScene.capability.json
    smartthings capabilities:presentation:create <id> -i driver/capabilities/activateScene.presentation.json
 
@@ -112,7 +126,7 @@ It remembers your channel after the first run, so upgrades are a single command 
 3. Create a channel in the [SmartThings Developer Console](https://developer.smartthings.com/console/integrations).
 4. Package and upload the driver:
 
-   ```sh
+   ```powershell
    smartthings edge:drivers:package driver --channel <channelId> --hub <hubId>
    ```
 
@@ -120,7 +134,7 @@ It remembers your channel after the first run, so upgrades are a single command 
 6. In the SmartThings app, go to the device → **⋮** → **Driver** → select **SmartWings Day/Night Z-Wave**.
 7. Delete the two old junk child devices left behind by the stock driver.
 
-### Custom capabilities caveat
+### Custom Capabilities Caveat
 
 SmartThings custom capability IDs embed a per-account namespace prefix (e.g. `happyvessel61954.`). If you're installing on a different SmartThings account, the profiles and driver source will reference the wrong prefix. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the find-and-replace steps.
 
@@ -130,7 +144,7 @@ SmartThings custom capability IDs embed a per-account namespace prefix (e.g. `ha
 That is a SmartThings platform limitation — it shows the account GUID, not a human name. There is no way to change it from within the driver package.
 
 **The two Shade/Sheer controls look different from each other.**
-This is intentional. See [Why Shade looks different from Sheer](#why-shade-looks-different-from-sheer).
+This is intentional. See [Why the Shade and Sheer Controls Look Different](#why-the-shade-and-sheer-controls-look-different).
 
 ## History
 
@@ -138,7 +152,7 @@ I bought three sets of the day/night shades with the Z-Wave motor. When I added 
 
 ## Reference
 
-- [SmartWings Z-Wave Programming Guide](./assets/smartwings-z-wave-programming-guide.pdf): Retrieved [from their site](https://cdn.shopify.com/s/files/1/0573/0215/5461/files/SmartWings_Z-wave_Motor_Programming_Guide_cb52ae04-036e-446c-bff2-6e944bedbb5f.pdf?v=1754441184) for local reference/indexing. I am not sure if this covers dual-motor blinds to the detail of single motor blinds.
+- [SmartWings Z-Wave Programming Guide](./assets/smartwings-z-wave-programming-guide.pdf): Retrieved [from their site](https://cdn.shopify.com/s/files/1/0573/0215/5461/files/SmartWings_Z-wave_Motor_Programming_Guide_cb52ae04-036e-446c-bff2-6e944bedbb5f.pdf?v=1754441184) for local reference/indexing.
 - [SmartThings Developer Center](https://developer.smartthings.com/) - Information on creating [device integrations](https://developer.smartthings.com/docs/devices/device-basics) for interacting with Z-Wave and other device types.
 - [SmartThings Edge driver for Z-Wave window treatments](https://github.com/SmartThingsCommunity/SmartThingsEdgeDrivers/tree/main/drivers/SmartThings/zwave-window-treatment) - This is what drives the blinds by default.
 - [SmartThings Advanced Dashboard](https://my.smartthings.com/advanced/devices) - Advanced view of the devices available on your Home Hub, which allows better control of drivers, etc.

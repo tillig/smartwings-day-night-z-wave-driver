@@ -1,11 +1,23 @@
 {
-  "dashboard": { "states": [], "actions": [] },
+  "automation": {
+    "actions": [
+    ],
+    "conditions": [
+    ]
+  },
+  "dashboard": {
+    "actions": [
+    ],
+    "states": [
+    ]
+  },
   "detailView": [
     {
-      "label": "Apply selected mode",
       "displayType": "pushButton",
-      "pushButton": { "command": "activate" }
+      "label": "Apply selected mode",
+      "pushButton": {
+        "command": "activate"
+      }
     }
-  ],
-  "automation": { "conditions": [], "actions": [] }
+  ]
 }
