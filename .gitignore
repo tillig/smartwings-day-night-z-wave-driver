@@ -1,0 +1,6 @@
+# Build artifacts
+build/
+*.zip
+
+# Local setup state (channel id cache, etc.)
+setup/.local/

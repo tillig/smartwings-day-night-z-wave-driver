@@ -48,9 +48,9 @@ The device detail screen has four sections, in order:
 
 **Save current as Favorite** captures wherever both rails are right now.
 
-### Why Shade looks different from Sheer
+### Why the Shade and Sheer controls look different
 
-The Shade section uses the standard `windowShade` capability (the combined tile with Open/Close buttons and a draggable percentage bar). The Sheer section uses a clean custom slider. This visual mismatch is intentional: `windowShade` is what Google Home recognizes as a real blind, enabling "open/close/set the blinds to N%" voice commands. Don't try to make them look the same — the visual difference is the cost of native voice control.
+You'll notice the **Shade** control (with Open/Close buttons and a percentage bar) looks different from the clean **Sheer** slider. That's on purpose: the Shade control is built the specific way that lets Google Home and Alexa recognize it as a real blind, so voice commands like "open the blinds" or "set the blinds to 50%" work. Making the two look identical would break that. It's a small cosmetic quirk in exchange for working voice control. (For the technical details, see [CONTRIBUTING.md](./CONTRIBUTING.md).)
 
 ## Voice Control (Google Home)
 
@@ -81,9 +81,17 @@ For scenes/Favorite: create SmartThings Scenes (Google Home exposes those as voi
 The `setup/` directory contains PowerShell scripts that automate everything (creating custom capabilities, creating a channel, and installing the driver):
 
 1. Run `setup/New-Capabilities.ps1` to create the custom capabilities in your SmartThings account.
-2. Run `setup/Install-Driver.ps1` to package, upload, and install the driver.
+2. Run `setup/Install-Driver.ps1 -HubId <your-hub-id>` to package, upload, and install the driver. (`smartthings edge:hubs` lists your hub IDs.)
 3. In the SmartThings app, go to the device → **⋮** → **Driver** → select **SmartWings Day/Night Z-Wave**.
 4. Delete the two old junk child devices left behind by the stock driver (they will show up as unrecognized devices).
+
+**Later, to deploy an updated version of the driver**, just run:
+
+```powershell
+./setup/Update.ps1
+```
+
+It remembers your channel after the first run, so upgrades are a single command with no arguments.
 
 ### Option B — Manual install
 

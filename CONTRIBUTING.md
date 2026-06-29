@@ -129,14 +129,17 @@ any authentication**. This is exactly what CI runs on every push/PR.
 Releases are a **local** step — there is no CI upload. SmartThings has no
 long-lived API token (personal access tokens expire after 24 hours), so
 automating channel uploads in CI is impractical. Use the local CLI login
-(`smartthings login`, which auto-refreshes) and the setup script:
+(`smartthings login`, which auto-refreshes).
+
+The simplest path is `setup/Update.ps1`, which resolves your channel (cached
+after the first run) and packages + assigns the driver:
 
 ```powershell
-# Release to the channel (enrolled hubs auto-update):
-./setup/Install-Driver.ps1 -ChannelId <channelId>
+# First time — point it at your channel by name (then it's cached):
+./setup/Update.ps1 -ChannelName '<your channel name>'
 
-# Or release AND install directly on a specific hub:
-./setup/Install-Driver.ps1 -ChannelId <channelId> -HubId <hubId>
+# Every time after that — no arguments needed:
+./setup/Update.ps1
 ```
 
 Or invoke the CLI directly:
@@ -188,6 +191,19 @@ The Scene component uses the standard `mode` capability to display the dropdown.
 On first init, the driver automatically creates a child device named `<shade name> Sheer` using the `smartwings-sheer` profile. This exposes the middle rail as an ordinary `windowShade` so Google Home picks it up as a second blind with full voice control ("open the sheer", "set the sheer to 50%").
 
 The child device is kept in sync by `sync_sheer_child()` every time the parent receives a Z-Wave report for the middle rail.
+
+---
+
+## Why the Shade and Sheer controls look different in the app
+
+The **Shade** (bottom rail) uses the stock `windowShade` capability — the combined tile with Open/Close/Pause buttons and a draggable percentage bar. The **Sheer** (middle rail) uses the custom `sheerLevel` slider.
+
+This asymmetry is deliberate, for two reasons:
+
+1. **Voice control.** `windowShade` is a standard capability that Google Home / Alexa map to their blind/openable traits, enabling "open/close/set to N%" by voice. Custom capabilities like `sheerLevel` are not exposed to voice assistants — which is exactly why the Sheer rail also gets its own child `windowShade` device (above) for voice.
+2. **Inverted semantics.** The sheer value is inverted relative to rail height (`sheer% = 100 − middle`). Driving that through the stock `windowShade`/`windowShadeLevel` pair fought the platform's built-in shade-vs-level linkage and left the displayed value wedged. A custom slider we fully control avoids that.
+
+So: stock `windowShade` where voice + standard behavior matter (the opaque shade), custom slider where we need clean inverted control (the in-app sheer). Don't "unify" the look — it would break one or both.
 
 ---
 
