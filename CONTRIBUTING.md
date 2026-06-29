@@ -4,6 +4,7 @@
 - [Coordinate Model](#coordinate-model)
 - [Custom Capabilities](#custom-capabilities)
 - [Development Workflow](#development-workflow)
+- [How Distribution Works](#how-distribution-works)
 - [Scenes and State](#scenes-and-state)
 - [Child "Sheer" Device](#child-sheer-device)
 - [Why the Shade and Sheer Controls Look Different](#why-the-shade-and-sheer-controls-look-different)
@@ -80,6 +81,12 @@ After deploying, **Lua-only changes** hot-reload on the hub automatically, but *
 To watch hub logs while testing: `smartthings edge:drivers:logcat <driverId> --hub-address <hub-ip>`. The connection is flaky and typically drops after 1–2 minutes, so use short bursts.
 
 > **luacheck needs Lua 5.4, not 5.5.** The current luacheck release (1.2.0) cannot run under Lua 5.5 — an upstream gap that will resolve when luacheck adds 5.5 support. If your default `lua` is 5.5, install Lua 5.4 (`brew install lua@5.4`), install luacheck against it (`luarocks install luacheck`), and put `~/.luarocks/bin` ahead on your `PATH`. CI is unaffected — it pins its own Lua version.
+
+## How Distribution Works
+
+Edge drivers are distributed through **channels**: an author packages a driver and uploads it to a channel, and any hub **subscribed** to that channel pulls the driver down and **auto-updates** whenever a new version is uploaded (hubs poll roughly every 12 hours). Installing a community driver by clicking a shared "channel invitation" link is just subscribing your hub to someone else's channel — that is why such drivers seem to "just work" and update themselves: the author keeps uploading new versions to the channel you're subscribed to.
+
+This project uses the same model, except you are on **both** sides of it: you own the channel *and* you build and upload to it. That is the extra step versus subscribing to someone else's channel — your local code changes don't reach the channel until you run a deploy. Once deployed, the hub auto-pulls it like any other channel update. `Deploy-Driver.ps1` automates the author's side (package, assign to your channel), and the first install also enrolls your hub.
 
 ## Scenes and State
 
