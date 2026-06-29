@@ -14,7 +14,7 @@
 
 .PARAMETER HubId
     The SmartThings hub ID to install the driver on.
-    Run `smartthings edge:hubs` to find yours.
+    Run `smartthings devices --type HUB` to find yours.
     Example: 00000000-0000-0000-0000-00000000HUB0
 
 .PARAMETER ChannelId
@@ -43,7 +43,7 @@
     Prerequisites:
       1. Node.js + npm are installed.
       2. SmartThings CLI is installed: npm install -g @smartthings/cli
-      3. You have logged in: smartthings login
+      3. Authenticated (any command opens a browser to log in the first time)
          (Interactive browser login -- run once, then the token is cached.)
 #>
 [CmdletBinding()]

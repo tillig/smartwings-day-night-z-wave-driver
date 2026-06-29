@@ -41,7 +41,7 @@
     Prerequisites:
       1. Node.js + npm are installed.
       2. SmartThings CLI is installed: npm install -g @smartthings/cli
-      3. You have logged in: smartthings login
+      3. Authenticated (any command opens a browser to log in the first time)
          (Interactive browser login -- run this once before the first script run.)
 #>
 [CmdletBinding()]
@@ -83,7 +83,7 @@ Install it with:
     npm install -g @smartthings/cli
 
 Then log in once with:
-    smartthings login
+    smartthings devices   # opens a browser to log in the first time
 '@
     exit 1
 }
@@ -97,7 +97,7 @@ if ($LASTEXITCODE -ne 0) {
 The SmartThings CLI does not appear to be authenticated (or returned an error).
 
 Run the following to log in (interactive browser):
-    smartthings login
+    smartthings devices   # opens a browser to log in the first time
 
 Then re-run this script.
 '@

@@ -87,7 +87,7 @@ For scenes/Favorite: create SmartThings Scenes (Google Home exposes those as voi
 
   ```powershell
   npm install -g @smartthings/cli
-  smartthings login
+  smartthings devices   # first run opens a browser to log in
   ```
 
 ### Option A — Setup Scripts (Recommended)
@@ -95,7 +95,7 @@ For scenes/Favorite: create SmartThings Scenes (Google Home exposes those as voi
 The `setup/` directory contains PowerShell scripts that automate everything (creating custom capabilities, creating a channel, and installing the driver):
 
 1. Run `setup/New-Capabilities.ps1` to create the custom capabilities in your SmartThings account.
-2. Run `setup/Deploy-Driver.ps1 -ChannelName '<name>' -CreateChannel -HubId <your-hub-id>` to create a channel, package the driver, and install it. (`smartthings edge:hubs` lists your hub IDs.)
+2. Run `setup/Deploy-Driver.ps1 -ChannelName '<name>' -CreateChannel -HubId <your-hub-id>` to create a channel, package the driver, and install it. (`smartthings devices --type HUB` lists your hub IDs.)
 3. In the SmartThings app, go to the device → **⋮** → **Driver** → select **SmartWings Day/Night Z-Wave**.
 4. Delete the two old junk child devices left behind by the stock driver (they will show up as unrecognized devices).
 
@@ -123,14 +123,24 @@ It remembers your channel after the first run, so upgrades are a single command 
    ```
 
 2. Note the assigned capability IDs (they'll have your account namespace prefix, e.g. `yournamespace.activateScene`). Update the namespace prefix in `driver/profiles/*.yml` and `driver/src/init.lua` if it differs from `happyvessel61954.` — see [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
-3. Create a channel in the [SmartThings Developer Console](https://developer.smartthings.com/console/integrations).
-4. Package and upload the driver:
+3. Create a channel (the command prompts for a name and description; choose type `DRIVER`). Note the channel ID it prints:
+
+   ```powershell
+   smartthings edge:channels:create
+   ```
+
+4. Find your hub ID:
+
+   ```powershell
+   smartthings devices --type HUB
+   ```
+
+5. Package the driver, assign it to the channel, and install it on the hub — this one command does all three (and enrolls the hub in the channel automatically):
 
    ```powershell
    smartthings edge:drivers:package driver --channel <channelId> --hub <hubId>
    ```
 
-5. Enroll your hub in the channel.
 6. In the SmartThings app, go to the device → **⋮** → **Driver** → select **SmartWings Day/Night Z-Wave**.
 7. Delete the two old junk child devices left behind by the stock driver.
 

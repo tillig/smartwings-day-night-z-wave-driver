@@ -54,7 +54,7 @@
 .NOTES
     Prerequisites:
       1. SmartThings CLI installed: npm install -g @smartthings/cli
-      2. Logged in once: smartthings login
+      2. Authenticated (any command opens a browser to log in the first time)
       3. Custom capabilities created: ./New-Capabilities.ps1
 #>
 [CmdletBinding()]
@@ -88,7 +88,7 @@ if (-not (Get-Command 'smartthings' -ErrorAction SilentlyContinue)) {
 The SmartThings CLI was not found on PATH.
 
 Install it with:   npm install -g @smartthings/cli
-Then log in once:  smartthings login
+Then run any command (e.g. smartthings devices) to log in via browser.
 '@
     exit 1
 }
@@ -99,7 +99,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error @"
 The SmartThings CLI is not authenticated (or returned an error).
 
-Log in (interactive browser) with:   smartthings login
+Run any command (e.g. smartthings devices) to log in via browser.
 Then re-run this script.
 
 CLI output:

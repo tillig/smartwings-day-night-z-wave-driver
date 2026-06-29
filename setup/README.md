@@ -11,13 +11,13 @@ Z-Wave driver. These scripts replace the manual SmartThings CLI steps.
 
 ## Prerequisites
 
-Install the SmartThings CLI and log in once (interactive browser; the token is
-cached and auto-refreshed afterward), then find your hub ID:
+Install the SmartThings CLI, then list your hubs. The first command that needs
+authentication opens a browser to log in; the token is cached and auto-refreshed
+afterward. Note your hub ID from the output:
 
 ```powershell
 npm install -g @smartthings/cli
-smartthings login
-smartthings edge:hubs   # note your hub ID
+smartthings devices --type HUB   # first run opens a browser to log in; note the hub ID
 ```
 
 ## First-Time Setup
