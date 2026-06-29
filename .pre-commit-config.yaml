@@ -19,3 +19,21 @@ repos:
       - id: json-sort
         args:
           - --autofix
+  - repo: local
+    hooks:
+      - id: luac-syntax-check
+        name: Lua syntax check (luac -p)
+        language: system
+        entry: bash -c 'for f in "$@"; do luac -p "$f" || exit 1; done' --
+        types: [file]
+        files: \.lua$
+        pass_filenames: true
+      - id: luacheck
+        name: luacheck (Lua linter)
+        language: system
+        entry: luacheck
+        args:
+          - --config=.luacheckrc
+        types: [file]
+        files: \.lua$
+        pass_filenames: true

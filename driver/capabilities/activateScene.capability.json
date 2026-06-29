@@ -1,0 +1,8 @@
+{
+  "name": "Activate Scene",
+  "status": "proposed",
+  "attributes": {},
+  "commands": {
+    "activate": { "name": "activate", "arguments": [] }
+  }
+}

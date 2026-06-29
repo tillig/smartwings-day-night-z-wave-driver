@@ -1,0 +1,11 @@
+{
+  "dashboard": { "states": [], "actions": [] },
+  "detailView": [
+    {
+      "label": "Apply selected mode",
+      "displayType": "pushButton",
+      "pushButton": { "command": "activate" }
+    }
+  ],
+  "automation": { "conditions": [], "actions": [] }
+}

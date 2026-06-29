@@ -1,0 +1,6 @@
+name: "SmartWings Day/Night Z-Wave"
+packageKey: "smartwings-daynight-zwave"
+permissions:
+  zwave: {}
+description: "Driver for SmartWings dual-motor day/night cellular shades (Z-Wave). Exposes both motors (middle rail + bottom rail) of a single shade as independent controls."
+vendorSupportInformation: "https://github.com/tillig/smartwings-day-night-z-wave-driver"

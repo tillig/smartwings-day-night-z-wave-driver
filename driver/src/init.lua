@@ -1,0 +1,544 @@
+-- SmartWings Day/Night Z-Wave driver
+-- Licensed under the MIT License (see repository LICENSE).
+--
+-- A SmartWings day/night cellular shade is a single Z-Wave node with two
+-- multichannel SWITCH_MULTILEVEL endpoints, one per motor:
+--   * endpoint 1 = BOTTOM rail  (component "main")
+--   * endpoint 2 = MIDDLE rail  (component "sheer")
+--
+-- Coordinate model (confirmed empirically): value = rail HEIGHT on a single
+-- vertical scale, 0 = window bottom, 100 = window top. Higher = more open.
+-- The window is split top->bottom into three bands:
+--   [top .. middle]    = SHEER fabric        (sheer% = 100 - middle)
+--   [middle .. bottom] = OPAQUE fabric
+--   [bottom .. floor]  = OPEN / see-through  (= bottom)
+-- Hard physical rule: middle >= bottom. The firmware enforces this by validating
+-- a move against the OTHER rail's *target* (not its current physical position),
+-- so to raise the bottom past the middle we command the middle first, then the
+-- bottom; both motors then run simultaneously.
+--
+-- UX (parent device components):
+--   * "main"  presents the BOTTOM rail as an ordinary window shade so that
+--     Google Home / voice "open|close|set NN%" behave like a normal blind.
+--   * "sheer" presents the MIDDLE rail as a "how much is sheer" level
+--     (sheer% = 100 - middle), via the custom sheerLevel capability.
+--   * "scene" offers one-tap day/night scenes (mode dropdown + "apply" button +
+--     "save favorite" button): Blackout / Sheer / Open / Favorite.
+-- A CHILD device ("<label> Sheer") mirrors the middle rail as its own window
+-- shade so Google Home can voice-control the sheer (open = full sheer).
+--
+-- CUSTOM CAPABILITIES: this driver references three custom capabilities whose IDs
+-- embed a per-SmartThings-account namespace prefix (here "happyvessel61954."):
+--   happyvessel61954.activateScene  (stateless "apply selected mode" button)
+--   happyvessel61954.sheerLevel     (0-100 sheer slider)
+--   happyvessel61954.saveFavorite   (stateless "save current as favorite" button)
+-- Their source definitions live in driver/capabilities/*.json. A DIFFERENT account
+-- gets a DIFFERENT namespace, so a fork must recreate them and find/replace the
+-- prefix here and in profiles/*.yml. See CONTRIBUTING.md.
+
+local capabilities = require "st.capabilities"
+local cc = require "st.zwave.CommandClass"
+--- @type st.zwave.Driver
+local ZwaveDriver = require "st.zwave.driver"
+--- @type st.zwave.defaults
+local defaults = require "st.zwave.defaults"
+local constants = require "st.zwave.constants"
+--- @type st.zwave.CommandClass.SwitchMultilevel
+local SwitchMultilevel = (require "st.zwave.CommandClass.SwitchMultilevel")({ version = 4 })
+--- @type st.zwave.CommandClass.Battery
+local Battery = (require "st.zwave.CommandClass.Battery")({ version = 1 })
+local log = require "log"
+
+--------------------------------------------------------------------------------
+-- Constants
+--------------------------------------------------------------------------------
+
+local BOTTOM_COMPONENT = "main"   -- bottom rail, Z-Wave endpoint 1
+local SHEER_COMPONENT = "sheer"   -- middle rail, Z-Wave endpoint 2
+local SCENE_COMPONENT = "scene"   -- day/night scene picker + apply button (no endpoint)
+local BOTTOM_EP = 1
+local MIDDLE_EP = 2
+
+-- Custom stateless "apply selected scene" button capability.
+local ACTIVATE_SCENE_CAP = "happyvessel61954.activateScene"
+-- Custom "sheer amount" 0-100 slider capability for the middle rail. We use a
+-- custom capability (not the stock windowShade/windowShadeLevel) because the
+-- inverted sheer semantics conflict with the platform's windowShade<->level
+-- linkage, which left the stock level attribute wedged.
+local SHEER_LEVEL_CAP = "happyvessel61954.sheerLevel"
+-- Custom stateless "save current position as Favorite" button capability.
+local SAVE_FAVORITE_CAP = "happyvessel61954.saveFavorite"
+
+-- Persisted favorite position {middle, bottom}. Defaults match the user's typical
+-- favorite until they save their own.
+local FIELD_FAV_MIDDLE = "fav_middle"
+local FIELD_FAV_BOTTOM = "fav_bottom"
+local DEFAULT_FAV_MIDDLE = 76 -- sheer ~24%
+local DEFAULT_FAV_BOTTOM = 0
+
+-- Child "Sheer" device: presents the middle rail as its own ordinary window
+-- shade so Google Home exposes it as a second, voice-controllable blind.
+-- On the child, shadeLevel == sheer% (open = full sheer, close = no sheer).
+local SHEER_CHILD_KEY = "sheer"
+local SHEER_CHILD_PROFILE = "smartwings-sheer"
+
+-- Device fields holding each rail's last-known true physical height (0-100).
+-- These are the single source of truth for the coupling math; we never read it
+-- back through the (inverted) sheer display value.
+local FIELD_MIDDLE = "middle_height"
+local FIELD_BOTTOM = "bottom_height"
+
+-- Seconds to wait between the two ordered rail SETs so the firmware registers
+-- the first rail's new target before validating the second.
+local RAIL_STAGGER = 2.5
+
+-- Day/night scene presets, expressed as physical rail heights {middle, bottom}.
+local MODE_BLACKOUT = "Blackout"
+local MODE_SHEER = "Sheer"
+local MODE_OPEN = "Open"
+local MODE_FAVORITE = "Favorite"
+local SUPPORTED_MODES = { MODE_BLACKOUT, MODE_SHEER, MODE_OPEN, MODE_FAVORITE }
+
+-- The motor treats 99 as "100%". Map between the SmartThings 0-100 scale and
+-- the Z-Wave 0-99 wire scale.
+local function to_wire(level)
+  if level >= 100 then return 99 end
+  if level <= 0 then return 0 end
+  return level
+end
+
+local function from_wire(value)
+  if type(value) == "string" then return 0 end -- e.g. "OFF_DISABLE"
+  if value == nil then return 0 end
+  if value >= 99 then return 100 end
+  if value <= 0 then return 0 end
+  return value
+end
+
+--------------------------------------------------------------------------------
+-- Component <-> endpoint mapping
+--------------------------------------------------------------------------------
+
+local function component_to_endpoint(device, component_id)
+  if component_id == SHEER_COMPONENT then
+    return { MIDDLE_EP }
+  else
+    return { BOTTOM_EP }
+  end
+end
+
+local function endpoint_to_component(device, endpoint)
+  if endpoint == MIDDLE_EP then
+    return SHEER_COMPONENT
+  else
+    return BOTTOM_COMPONENT
+  end
+end
+
+--------------------------------------------------------------------------------
+-- State (true physical rail heights, kept in device fields)
+--------------------------------------------------------------------------------
+
+local function get_middle(device)
+  local v = device:get_field(FIELD_MIDDLE)
+  if v == nil then return 100 end
+  return v
+end
+
+local function get_bottom(device)
+  local v = device:get_field(FIELD_BOTTOM)
+  if v == nil then return 0 end
+  return v
+end
+
+-- Emit the display state for a rail height to its component. The bottom rail is
+-- shown straight (level = height); the sheer component is shown inverted
+-- (sheer% = 100 - middle height).
+--
+-- Order matters: emit windowShade (the openable enum) FIRST, then windowShadeLevel.
+-- The platform links these two capabilities and can auto-derive a shadeLevel from
+-- an open/closed enum; emitting the explicit level LAST ensures our value wins.
+local function emit_rail(device, component, height)
+  local comp = device.profile.components[component]
+  if component == SHEER_COMPONENT then
+    -- Inverted: sheer% = 100 - middle height. Custom capability, no platform
+    -- windowShade linkage to fight.
+    device:emit_component_event(comp,
+      capabilities[SHEER_LEVEL_CAP].sheerLevel(100 - height))
+  else
+    -- Bottom rail: ordinary window shade, shown straight.
+    local attr = capabilities.windowShade.windowShade
+    local state = attr.partially_open()
+    if height >= 100 then
+      state = attr.open()
+    elseif height <= 0 then
+      state = attr.closed()
+    end
+    device:emit_component_event(comp, state)
+    device:emit_component_event(comp, capabilities.windowShadeLevel.shadeLevel(height))
+  end
+end
+
+--------------------------------------------------------------------------------
+-- Child "Sheer" device
+--------------------------------------------------------------------------------
+
+local function get_sheer_child(device)
+  return device:get_child_by_parent_assigned_key(SHEER_CHILD_KEY)
+end
+
+-- Create the child "Sheer" device once, if it doesn't already exist.
+local function ensure_sheer_child(driver, device)
+  if device.network_type == "DEVICE_EDGE_CHILD" then return end
+  if get_sheer_child(device) ~= nil then return end
+  driver:try_create_device({
+    type = "EDGE_CHILD",
+    label = (device.label or "Shade") .. " Sheer",
+    profile = SHEER_CHILD_PROFILE,
+    parent_device_id = device.id,
+    parent_assigned_child_key = SHEER_CHILD_KEY,
+  })
+end
+
+-- Push the current sheer% (= 100 - middle height) to the child device's
+-- windowShade + windowShadeLevel so it stays in sync with the parent. open = full
+-- sheer (level 100), close = no sheer (level 0).
+local function sync_sheer_child(device, middle_height)
+  local child = get_sheer_child(device)
+  if child == nil then return end
+  local sheer = 100 - middle_height
+  local attr = capabilities.windowShade.windowShade
+  local state = attr.partially_open()
+  if sheer >= 100 then
+    state = attr.open()
+  elseif sheer <= 0 then
+    state = attr.closed()
+  end
+  child:emit_event(state)
+  child:emit_event(capabilities.windowShadeLevel.shadeLevel(sheer))
+end
+
+--------------------------------------------------------------------------------
+-- Scene / mode display
+--------------------------------------------------------------------------------
+
+-- Publish supported modes and a current mode value. The generic `mode` capability
+-- renders "-" until it has both a supported list and a non-nil current value.
+-- Since the true state is two rail heights (not an enum), the value reflects the
+-- named scene the rails sit on, or the last scene invoked otherwise.
+local function current_mode(device)
+  local middle, bottom = get_middle(device), get_bottom(device)
+  if middle >= 100 and bottom <= 0 then
+    return MODE_BLACKOUT
+  elseif middle <= 0 and bottom <= 0 then
+    return MODE_SHEER
+  elseif middle >= 100 and bottom >= 100 then
+    return MODE_OPEN
+  end
+  -- Sitting exactly on the saved favorite position?
+  local fav_middle = device:get_field(FIELD_FAV_MIDDLE) or DEFAULT_FAV_MIDDLE
+  local fav_bottom = device:get_field(FIELD_FAV_BOTTOM) or DEFAULT_FAV_BOTTOM
+  if middle == fav_middle and bottom == fav_bottom then
+    return MODE_FAVORITE
+  end
+  return device:get_latest_state(SCENE_COMPONENT, capabilities.mode.ID,
+    capabilities.mode.mode.NAME) or MODE_BLACKOUT
+end
+
+local function emit_mode(device, mode)
+  device:emit_component_event(device.profile.components[SCENE_COMPONENT],
+    capabilities.mode.supportedModes(SUPPORTED_MODES, { visibility = { displayed = false } }))
+  device:emit_component_event(device.profile.components[SCENE_COMPONENT],
+    capabilities.mode.supportedArguments(SUPPORTED_MODES, { visibility = { displayed = false } }))
+  device:emit_component_event(device.profile.components[SCENE_COMPONENT],
+    capabilities.mode.mode(mode))
+end
+
+--------------------------------------------------------------------------------
+-- Motor moves
+--------------------------------------------------------------------------------
+
+-- Send an absolute-position SET to one rail's endpoint, optimistically record the
+-- new height, and update that component's display. A delayed GET re-reads the
+-- firmware's (possibly clamped) true position to self-correct.
+local function set_rail(device, component, height)
+  height = math.max(0, math.min(100, height))
+  device:send_to_component(SwitchMultilevel:Set({
+    value = to_wire(height),
+    duration = constants.DEFAULT_DIMMING_DURATION,
+  }), component)
+  -- Record the intended height for the coupling math, but DON'T emit display
+  -- state optimistically -- the delayed GET's REPORT is the single source of
+  -- truth for what the UI shows, which keeps hub and cloud state in lockstep.
+  if component == SHEER_COMPONENT then
+    device:set_field(FIELD_MIDDLE, height)
+  else
+    device:set_field(FIELD_BOTTOM, height)
+  end
+  device.thread:call_with_delay(8, function()
+    device:send_to_component(SwitchMultilevel:Get({}), component)
+  end)
+end
+
+-- Move both rails to physical heights {middle, bottom}, enforcing middle >= bottom
+-- and ordering the two SETs so neither is rejected for crossing the other's target:
+--   * raising the bottom toward/above the middle  -> set MIDDLE first, then bottom
+--   * lowering the middle toward/below the bottom  -> set BOTTOM first, then middle
+-- A short stagger lets the firmware register the first target; the motors then run
+-- simultaneously.
+local function move_to(device, middle, bottom)
+  middle = math.max(0, math.min(100, middle))
+  bottom = math.max(0, math.min(100, bottom))
+  if middle < bottom then middle = bottom end -- enforce invariant
+
+  local first, second
+  if bottom > get_bottom(device) then
+    -- bottom is rising: clear the middle out of the way first
+    first = function() set_rail(device, SHEER_COMPONENT, middle) end
+    second = function() set_rail(device, BOTTOM_COMPONENT, bottom) end
+  else
+    -- bottom is steady/falling: move it first so the middle has room to drop
+    first = function() set_rail(device, BOTTOM_COMPONENT, bottom) end
+    second = function() set_rail(device, SHEER_COMPONENT, middle) end
+  end
+  first()
+  device.thread:call_with_delay(RAIL_STAGGER, second)
+end
+
+--------------------------------------------------------------------------------
+-- Capability command handlers
+--------------------------------------------------------------------------------
+
+-- main: bottom rail as an ordinary window shade
+local function bottom_set_level(driver, device, command)
+  local target = command.args.shadeLevel or command.args.level or 0
+  -- opening the bottom past the middle lifts the middle with it
+  move_to(device, math.max(get_middle(device), target), target)
+end
+
+local function bottom_open(driver, device, command)
+  move_to(device, 100, 100)
+end
+
+local function bottom_close(driver, device, command)
+  -- Close = lower the bottom rail only; leave the sheer/middle rail as-is.
+  move_to(device, get_middle(device), 0)
+end
+
+-- Set the sheer amount (0-100) on a given PARENT device: middle = 100 - sheer,
+-- clamped so the middle rail never drops below the bottom rail.
+local function set_sheer(parent, sheer)
+  sheer = math.max(0, math.min(100, sheer))
+  move_to(parent, 100 - sheer, get_bottom(parent))
+end
+
+-- sheer: "how much is sheer" on the middle rail (parent's custom slider).
+local function sheer_set_level(driver, device, command)
+  set_sheer(device, command.args.sheerLevel or 0)
+end
+
+local function pause(driver, device, command)
+  device:send_to_component(SwitchMultilevel:StopLevelChange({}), command.component)
+end
+
+--------------------------------------------------------------------------------
+-- Child "Sheer" device command handlers (route to the parent's middle rail).
+-- On the child, shadeLevel == sheer%, open = full sheer, close = no sheer.
+--------------------------------------------------------------------------------
+
+local function child_sheer_set_level(driver, child, command)
+  local parent = child:get_parent_device()
+  if parent then set_sheer(parent, command.args.shadeLevel or command.args.level or 0) end
+end
+
+local function child_sheer_open(driver, child, command)
+  local parent = child:get_parent_device()
+  if parent then set_sheer(parent, 100) end -- full sheer
+end
+
+local function child_sheer_close(driver, child, command)
+  local parent = child:get_parent_device()
+  if parent then set_sheer(parent, 0) end -- no sheer
+end
+
+local function child_sheer_pause(driver, child, command)
+  local parent = child:get_parent_device()
+  if parent then parent:send_to_component(SwitchMultilevel:StopLevelChange({}), SHEER_COMPONENT) end
+end
+
+-- Favorite position helpers (persisted per device).
+local function get_favorite(device)
+  return device:get_field(FIELD_FAV_MIDDLE) or DEFAULT_FAV_MIDDLE,
+         device:get_field(FIELD_FAV_BOTTOM) or DEFAULT_FAV_BOTTOM
+end
+
+local function save_favorite(driver, device, command)
+  local middle, bottom = get_middle(device), get_bottom(device)
+  device:set_field(FIELD_FAV_MIDDLE, middle, { persist = true })
+  device:set_field(FIELD_FAV_BOTTOM, bottom, { persist = true })
+  log.info(string.format("save_favorite: middle=%d bottom=%d", middle, bottom))
+end
+
+-- Drive the rails to a named scene. Returns false for an unknown scene.
+local function apply_scene(device, scene)
+  if scene == MODE_BLACKOUT then
+    move_to(device, 100, 0)
+  elseif scene == MODE_SHEER then
+    move_to(device, 0, 0)
+  elseif scene == MODE_OPEN then
+    move_to(device, 100, 100)
+  elseif scene == MODE_FAVORITE then
+    local fav_middle, fav_bottom = get_favorite(device)
+    move_to(device, fav_middle, fav_bottom)
+  else
+    log.warn("apply_scene: unknown scene " .. tostring(scene))
+    return false
+  end
+  emit_mode(device, scene)
+  return true
+end
+
+local function set_mode(driver, device, command)
+  apply_scene(device, command.args.mode)
+end
+
+-- Stateless button: re-apply whatever scene is currently selected in the dropdown.
+local function activate_scene(driver, device, command)
+  apply_scene(device, device:get_latest_state(SCENE_COMPONENT, capabilities.mode.ID,
+    capabilities.mode.mode.NAME) or MODE_BLACKOUT)
+end
+
+
+--------------------------------------------------------------------------------
+-- Z-Wave report handler (single path; updates field + display per endpoint)
+--------------------------------------------------------------------------------
+
+local function switch_multilevel_report(driver, device, cmd)
+  local raw = cmd.args.target_value
+  if raw == nil or raw == "OFF_DISABLE" then raw = cmd.args.value end
+  local height = from_wire(raw)
+  local endpoint = cmd.src_channel or 0
+
+  if endpoint == MIDDLE_EP then
+    device:set_field(FIELD_MIDDLE, height)
+    emit_rail(device, SHEER_COMPONENT, height)
+    sync_sheer_child(device, height) -- keep the child "Sheer" blind in sync
+  else
+    device:set_field(FIELD_BOTTOM, height)
+    emit_rail(device, BOTTOM_COMPONENT, height)
+  end
+
+  device:emit_component_event(device.profile.components[SCENE_COMPONENT],
+    capabilities.mode.mode(current_mode(device)))
+end
+
+--------------------------------------------------------------------------------
+-- Lifecycle
+--------------------------------------------------------------------------------
+
+local function refresh_positions(device)
+  device:send_to_component(SwitchMultilevel:Get({}), BOTTOM_COMPONENT)
+  device:send_to_component(SwitchMultilevel:Get({}), SHEER_COMPONENT)
+  device:send(Battery:Get({}))
+end
+
+local function device_init(self, device)
+  if device.network_type == "DEVICE_EDGE_CHILD" then return end
+  device:set_component_to_endpoint_fn(component_to_endpoint)
+  device:set_endpoint_to_component_fn(endpoint_to_component)
+  emit_mode(device, current_mode(device))
+  ensure_sheer_child(self, device)
+end
+
+local function device_added(self, device)
+  if device.network_type == "DEVICE_EDGE_CHILD" then
+    -- Child "Sheer" device: seed its display from the parent's current middle rail.
+    device:emit_event(capabilities.windowShade.supportedWindowShadeCommands(
+      { "open", "close", "pause" }, { visibility = { displayed = false } }))
+    local parent = device:get_parent_device()
+    if parent then sync_sheer_child(parent, get_middle(parent)) end
+    return
+  end
+  device:emit_component_event(device.profile.components[BOTTOM_COMPONENT],
+    capabilities.windowShade.supportedWindowShadeCommands(
+      { "open", "close", "pause" }, { visibility = { displayed = false } }))
+  emit_mode(device, current_mode(device))
+  ensure_sheer_child(self, device)
+  refresh_positions(device)
+end
+
+local function do_refresh(driver, device, command)
+  if device.network_type == "DEVICE_EDGE_CHILD" then
+    local parent = device:get_parent_device()
+    if parent then refresh_positions(parent) end
+    return
+  end
+  refresh_positions(device)
+end
+
+--------------------------------------------------------------------------------
+-- Driver definition
+--------------------------------------------------------------------------------
+
+local driver_template = {
+  supported_capabilities = {
+    capabilities.battery,
+  },
+  zwave_handlers = {
+    [cc.SWITCH_MULTILEVEL] = {
+      [SwitchMultilevel.REPORT] = switch_multilevel_report,
+    },
+  },
+  capability_handlers = {
+    [capabilities.refresh.ID] = {
+      [capabilities.refresh.commands.refresh.NAME] = do_refresh,
+    },
+    [capabilities.mode.ID] = {
+      [capabilities.mode.commands.setMode.NAME] = set_mode,
+    },
+    [ACTIVATE_SCENE_CAP] = {
+      ["activate"] = activate_scene,
+    },
+    [SHEER_LEVEL_CAP] = {
+      ["setSheerLevel"] = sheer_set_level,
+    },
+    [SAVE_FAVORITE_CAP] = {
+      ["save"] = save_favorite,
+    },
+    -- windowShade/windowShadeLevel arrive from EITHER the parent's "main" (bottom
+    -- rail) OR the child "Sheer" device. Dispatch by device type.
+    [capabilities.windowShade.ID] = {
+      [capabilities.windowShade.commands.open.NAME] = function(driver, device, command)
+        if device.network_type == "DEVICE_EDGE_CHILD" then return child_sheer_open(driver, device, command) end
+        return bottom_open(driver, device, command)
+      end,
+      [capabilities.windowShade.commands.close.NAME] = function(driver, device, command)
+        if device.network_type == "DEVICE_EDGE_CHILD" then return child_sheer_close(driver, device, command) end
+        return bottom_close(driver, device, command)
+      end,
+      [capabilities.windowShade.commands.pause.NAME] = function(driver, device, command)
+        if device.network_type == "DEVICE_EDGE_CHILD" then return child_sheer_pause(driver, device, command) end
+        return pause(driver, device, command)
+      end,
+    },
+    [capabilities.windowShadeLevel.ID] = {
+      [capabilities.windowShadeLevel.commands.setShadeLevel.NAME] = function(driver, device, command)
+        if device.network_type == "DEVICE_EDGE_CHILD" then return child_sheer_set_level(driver, device, command) end
+        return bottom_set_level(driver, device, command)
+      end,
+    },
+  },
+  lifecycle_handlers = {
+    init = device_init,
+    added = device_added,
+  },
+}
+
+-- Register defaults only for battery; all shade reports/commands are handled
+-- explicitly above so there is exactly ONE report path (no stock handler writing
+-- conflicting values to the inverted sheer component).
+defaults.register_for_default_handlers(driver_template, driver_template.supported_capabilities)
+
+--- @type st.zwave.Driver
+local smartwings_daynight = ZwaveDriver("smartwings-daynight-zwave", driver_template)
+smartwings_daynight:run()

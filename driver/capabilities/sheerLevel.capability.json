@@ -1,0 +1,27 @@
+{
+  "name": "Sheer Level",
+  "status": "proposed",
+  "attributes": {
+    "sheerLevel": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "value": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "unit": { "type": "string", "enum": ["%"], "default": "%" }
+        },
+        "additionalProperties": false,
+        "required": ["value"]
+      },
+      "setter": "setSheerLevel",
+      "enumCommands": []
+    }
+  },
+  "commands": {
+    "setSheerLevel": {
+      "name": "setSheerLevel",
+      "arguments": [
+        { "name": "sheerLevel", "optional": false, "schema": { "type": "integer", "minimum": 0, "maximum": 100 } }
+      ]
+    }
+  }
+}

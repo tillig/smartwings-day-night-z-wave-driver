@@ -1,0 +1,89 @@
+# Release workflow: package and publish the driver to a SmartThings channel
+# when a semver tag (v*.*.*) is pushed.
+#
+# Required GitHub secrets:
+#   SMARTTHINGS_TOKEN      — SmartThings Personal Access Token (PAT).
+#                            Generate at https://account.smartthings.com/tokens
+#                            Needs at minimum:
+#                              r:devices, r:installedapps,
+#                              w:channels (to assign the driver to a channel)
+#   SMARTTHINGS_CHANNEL_ID — The UUID of your SmartThings channel
+#                            (find it in the Developer Workspace or via
+#                             `smartthings edge:channels --list`).
+#
+# Optional GitHub secret:
+#   SMARTTHINGS_HUB_ID     — If set, the driver is also pushed directly to
+#                            this hub after channel assignment.  Usually not
+#                            needed: enrolled hubs pull updates automatically.
+#
+# The entire job is skipped gracefully when SMARTTHINGS_TOKEN is absent so
+# that forks or contributors who push tags won't see a red workflow.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    name: Publish driver to SmartThings channel
+    runs-on: ubuntu-latest
+    # Skip the job when the required token is not configured.
+    if: ${{ secrets.SMARTTHINGS_TOKEN != '' }}
+    permissions:
+      contents: write  # needed for gh release create
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install SmartThings CLI
+        run: npm install -g @smartthings/cli
+
+      # ── Package the driver locally ────────────────────────────────────────
+      - name: Build driver zip
+        env:
+          SMARTTHINGS_TOKEN: ${{ secrets.SMARTTHINGS_TOKEN }}
+        run: |
+          mkdir -p build
+          smartthings edge:drivers:package driver --build-only build/driver.zip
+
+      # ── Assign driver to channel (= "release") ───────────────────────────
+      # This uploads the packaged driver and assigns it to the configured
+      # distribution channel. Hubs enrolled in the channel will receive the
+      # update automatically.
+      - name: Upload and assign to channel
+        env:
+          SMARTTHINGS_TOKEN: ${{ secrets.SMARTTHINGS_TOKEN }}
+          SMARTTHINGS_CHANNEL_ID: ${{ secrets.SMARTTHINGS_CHANNEL_ID }}
+        run: |
+          smartthings edge:drivers:package driver \
+            --channel "$SMARTTHINGS_CHANNEL_ID"
+
+      # ── (Optional) Push to a specific hub ────────────────────────────────
+      # Uncomment and configure SMARTTHINGS_HUB_ID to also install immediately
+      # to a particular hub, bypassing the normal channel-enrolment flow.
+      #
+      # - name: Install to hub
+      #   if: ${{ secrets.SMARTTHINGS_HUB_ID != '' }}
+      #   env:
+      #     SMARTTHINGS_TOKEN: ${{ secrets.SMARTTHINGS_TOKEN }}
+      #     SMARTTHINGS_HUB_ID: ${{ secrets.SMARTTHINGS_HUB_ID }}
+      #   run: |
+      #     smartthings edge:drivers:install \
+      #       --hub "$SMARTTHINGS_HUB_ID"
+
+      # ── Create a GitHub Release ───────────────────────────────────────────
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            build/driver.zip \
+            --title "Release ${{ github.ref_name }}" \
+            --generate-notes

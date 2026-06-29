@@ -1,0 +1,16 @@
+name: smartwings-sheer
+components:
+  # Profile for the CHILD "Sheer" device. It mirrors the parent's middle-rail /
+  # sheer control as an ordinary window shade so that Google Home exposes it as a
+  # second blind with full variable voice control ("open the sheer", "set the
+  # sheer to 50%"). shadeLevel == sheer% (0 = no sheer / middle rail up,
+  # 100 = full sheer / middle rail down). open = full sheer, close = no sheer.
+  - id: main
+    label: Sheer
+    capabilities:
+      - id: windowShade
+        version: 1
+      - id: windowShadeLevel
+        version: 1
+    categories:
+      - name: Blind

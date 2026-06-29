@@ -1,0 +1,49 @@
+name: smartwings-daynight
+components:
+  # POLISHED PROFILE for SmartWings day/night dual-motor shades.
+  #
+  # Coordinate model (confirmed empirically): one vertical scale where
+  # value = rail HEIGHT, 0 = window bottom, 100 = window top. Higher = more open.
+  #   - BOTTOM rail = Z-Wave endpoint 1 (component "main")
+  #   - MIDDLE rail = Z-Wave endpoint 2 (component "sheer"), shown inverted as sheer%
+  #     (sheer% = 100 - middle). Hard rule: middle >= bottom (firmware-enforced too).
+  #
+  # Components are displayed in the order listed. "sheer" is shown first because
+  # the sheer fabric occupies the TOP of the window, so it sits at the top of the
+  # control screen; then the opaque "main" shade; then the scene picker.
+  #
+  # "main" reads as an ordinary window shade for Google Home / voice:
+  #   open  = bottom rail up (see out)      close = bottom rail down (covered)
+  # "sheer" exposes the middle rail as a "how much is sheer" slider.
+  # "scene" (placed last) holds the day/night scene picker + apply button.
+  - id: sheer
+    label: Sheer
+    capabilities:
+      - id: happyvessel61954.sheerLevel
+        version: 1
+    categories:
+      - name: Blind
+  - id: main
+    label: Shade
+    capabilities:
+      - id: windowShade
+        version: 1
+      - id: windowShadeLevel
+        version: 1
+      - id: battery
+        version: 1
+      - id: refresh
+        version: 1
+    categories:
+      - name: Blind
+  - id: scene
+    label: Scene
+    capabilities:
+      - id: mode
+        version: 1
+      - id: happyvessel61954.activateScene
+        version: 1
+      - id: happyvessel61954.saveFavorite
+        version: 1
+    categories:
+      - name: Blind

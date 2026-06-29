@@ -1,0 +1,11 @@
+zwaveManufacturer:
+  # SmartWings day/night dual-motor cellular shade (Z-Wave motor).
+  # Confirmed against the user's paired units: manufacturerId 0x045A (1114),
+  # productType 0x0004 (4), productId 0x0509 (1289). One Z-Wave node with two
+  # multichannel SWITCH_MULTILEVEL endpoints, one per motor (middle rail / bottom rail).
+  - id: "smartwings/daynight"
+    deviceLabel: SmartWings Day/Night Shade
+    manufacturerId: 0x045A
+    productType: 0x0004
+    productId: 0x0509
+    deviceProfileName: smartwings-daynight

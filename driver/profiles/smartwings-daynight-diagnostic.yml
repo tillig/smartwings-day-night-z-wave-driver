@@ -1,0 +1,34 @@
+name: smartwings-daynight-diagnostic
+components:
+  # DIAGNOSTIC PROFILE.
+  # Goal of this profile is to expose each motor (Z-Wave multichannel endpoint)
+  # as a raw, independent shade control so we can learn empirically:
+  #   - which endpoint drives the middle rail vs the bottom rail
+  #   - which travel direction each motor reports (watch for position inversion)
+  #   - how reported position (0-99/0-100) maps to physical position
+  # Once learned, this profile is replaced by the polished day/night profile.
+  #
+  # Component "main" -> Z-Wave endpoint 1 (motor A)
+  # Component "motorB" -> Z-Wave endpoint 2 (motor B)
+  - id: main
+    label: Motor A (endpoint 1)
+    capabilities:
+      - id: windowShade
+        version: 1
+      - id: windowShadeLevel
+        version: 1
+      - id: battery
+        version: 1
+      - id: refresh
+        version: 1
+    categories:
+      - name: Blind
+  - id: motorB
+    label: Motor B (endpoint 2)
+    capabilities:
+      - id: windowShade
+        version: 1
+      - id: windowShadeLevel
+        version: 1
+    categories:
+      - name: Blind

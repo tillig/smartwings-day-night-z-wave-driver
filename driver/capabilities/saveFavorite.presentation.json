@@ -1,0 +1,7 @@
+{
+  "dashboard": { "states": [], "actions": [] },
+  "detailView": [
+    { "label": "Save current as Favorite", "displayType": "pushButton", "pushButton": { "command": "save" } }
+  ],
+  "automation": { "conditions": [], "actions": [] }
+}

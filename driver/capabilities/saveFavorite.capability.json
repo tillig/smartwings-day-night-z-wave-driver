@@ -1,0 +1,6 @@
+{
+  "name": "Save Favorite",
+  "status": "proposed",
+  "attributes": {},
+  "commands": { "save": { "name": "save", "arguments": [] } }
+}
