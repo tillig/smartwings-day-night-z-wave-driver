@@ -30,7 +30,8 @@
 -- CUSTOM CAPABILITIES: this driver references several custom capabilities whose
 -- IDs embed a per-SmartThings-account namespace prefix (here "happyvessel61954."):
 --   happyvessel61954.blackout / .sheer / .open (scene push-buttons)
---   happyvessel61954.favorite (save + recall a both-rail favorite)
+--   happyvessel61954.presetPosition (readout of the saved favorite position)
+--   happyvessel61954.settings (save + activate the both-rail favorite)
 -- Their source definitions live in driver/capabilities/*.json. A DIFFERENT account
 -- gets a DIFFERENT namespace, so a fork must recreate them and find/replace the
 -- prefix here and in profiles/*.yml. See CONTRIBUTING.md.
@@ -67,10 +68,12 @@ local MIDDLE_EP = 2
 -- `list` is a dropdown -- so we use a separate pushButton capability per scene.)
 -- Capability IDs: happyvessel61954.blackout / .sheer / .open; handlers are
 -- registered explicitly in the driver template below.
--- Custom "day/night favorite" capability: save (gear) + recall (button) of a
--- full both-rail position, with a string readout of the saved value. Modeled on
--- the stock windowShadePreset, but it stores BOTH rails (stock holds only one).
-local FAVORITE_CAP = "happyvessel61954.favorite"
+-- The favorite (a saved both-rail position) is presented with two custom
+-- capabilities so the two tiles can have distinct titles: PRESET_CAP shows the
+-- saved position readout ("Preset position" tile), SETTINGS_CAP has the
+-- save + activate buttons ("Settings" tile).
+local PRESET_CAP = "happyvessel61954.presetPosition"
+local SETTINGS_CAP = "happyvessel61954.settings"
 
 -- Persisted favorite position {middle, bottom}. Defaults match the user's typical
 -- favorite until they save their own.
@@ -321,12 +324,12 @@ local function get_favorite(device)
          device:get_field(FIELD_FAV_BOTTOM) or DEFAULT_FAV_BOTTOM
 end
 
--- Emit the readout shown under the Favorite control, e.g. "sheer 24% / open 0%".
+-- Emit the readout shown under the Preset position tile, e.g. "Sheer 24% / Open 0%".
 local function emit_favorite(device)
   local middle, bottom = get_favorite(device)
-  local text = string.format('sheer %d%% / open %d%%', 100 - middle, bottom)
+  local text = string.format('Sheer %d%% / Open %d%%', 100 - middle, bottom)
   device:emit_component_event(device.profile.components['favorite'],
-    capabilities[FAVORITE_CAP].favorite(text))
+    capabilities[PRESET_CAP].position(text))
 end
 
 -- gear: capture the current both-rail position as the favorite.
@@ -451,7 +454,7 @@ local driver_template = {
     ["happyvessel61954.blackout"] = { ["push"] = make_scene_button(MODE_BLACKOUT) },
     ["happyvessel61954.sheer"] = { ["push"] = make_scene_button(MODE_SHEER) },
     ["happyvessel61954.open"] = { ["push"] = make_scene_button(MODE_OPEN) },
-    [FAVORITE_CAP] = {
+    [SETTINGS_CAP] = {
       ["save"] = save_favorite,
       ["recall"] = recall_favorite,
     },

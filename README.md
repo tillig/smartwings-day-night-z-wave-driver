@@ -124,8 +124,11 @@ It remembers your channel after the first run, so upgrades are a single command 
    smartthings capabilities:create -i driver/capabilities/open.capability.json
    smartthings capabilities:presentation:create <id> -i driver/capabilities/open.presentation.json
 
-   smartthings capabilities:create -i driver/capabilities/favorite.capability.json
-   smartthings capabilities:presentation:create <id> -i driver/capabilities/favorite.presentation.json
+   smartthings capabilities:create -i driver/capabilities/presetPosition.capability.json
+   smartthings capabilities:presentation:create <id> -i driver/capabilities/presetPosition.presentation.json
+
+   smartthings capabilities:create -i driver/capabilities/settings.capability.json
+   smartthings capabilities:presentation:create <id> -i driver/capabilities/settings.presentation.json
    ```
 
 2. Note the assigned capability IDs (they'll have your account namespace prefix, e.g. `yournamespace.blackout`). Update the namespace prefix in `driver/profiles/*.yml` and `driver/src/init.lua` if it differs from `happyvessel61954.` — see [CONTRIBUTING.md](./CONTRIBUTING.md) for details.

@@ -1,0 +1,23 @@
+{
+  "automation": {
+    "actions": [
+    ],
+    "conditions": [
+    ]
+  },
+  "dashboard": {
+    "actions": [
+    ],
+    "states": [
+    ]
+  },
+  "detailView": [
+    {
+      "displayType": "state",
+      "label": "Current setting",
+      "state": {
+        "label": "{{position.value}}"
+      }
+    }
+  ]
+}

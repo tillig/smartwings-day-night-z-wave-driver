@@ -1,8 +1,6 @@
 {
   "attributes": {
-    "favorite": {
-      "enumCommands": [
-      ],
+    "position": {
       "schema": {
         "additionalProperties": false,
         "properties": {
@@ -18,17 +16,7 @@
     }
   },
   "commands": {
-    "recall": {
-      "arguments": [
-      ],
-      "name": "recall"
-    },
-    "save": {
-      "arguments": [
-      ],
-      "name": "save"
-    }
   },
-  "name": "Favorite",
+  "name": "Preset position",
   "status": "proposed"
 }

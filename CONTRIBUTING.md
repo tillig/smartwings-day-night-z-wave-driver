@@ -40,7 +40,8 @@ The driver uses two custom capabilities, which live in the SmartThings account (
 | Capability | ID | Purpose |
 | --- | --- | --- |
 | Scene buttons | `<namespace>.blackout`, `.sheer`, `.open` | One stateless push-button per scene; each `push` drives the rails to that scene immediately |
-| Favorite | `<namespace>.favorite` | Save (gear) and recall (button) a full both-rail favorite position, with a readout of the saved value |
+| Preset position | `<namespace>.presetPosition` | Read-only readout of the saved favorite position ("Sheer N% / Open N%") |
+| Settings | `<namespace>.settings` | Save and Activate buttons for the both-rail favorite position |
 
 Create them with the CLI (or `setup/New-Capabilities.ps1`, which does all of them):
 
@@ -99,7 +100,7 @@ Scenes are stored as rail heights `{middle, bottom}`:
 
 The Scene component uses three stateless push-button capabilities (`blackout`, `sheer`, `open`) — one button each, and each `push` drives both rails to that scene immediately. (A custom capability can't render a single control as a row of always-fire buttons: `displayType: list` is a dropdown, and only the built-in `windowShade` gets the platform's special button treatment. One `pushButton` capability per scene is how you get genuine immediate-fire buttons.)
 
-Separately, the **Favorite** control (custom `favorite` capability on the `favorite` component) stores a full `{middle, bottom}` position: the gear saves the current position, the button recalls it. It defaults to `{middle: 76, bottom: 0}` (sheer ~24%) until the user saves their own.
+Separately, the `favorite` component holds the favorite controls: the `presetPosition` capability shows the saved position as a read-only readout, and the `settings` capability provides the Save and Activate buttons. The favorite stores a full `{middle, bottom}` position and defaults to `{middle: 76, bottom: 0}` (sheer ~24%) until the user saves their own.
 
 ## Child "Sheer" Device
 

@@ -1,0 +1,18 @@
+{
+  "attributes": {
+  },
+  "commands": {
+    "recall": {
+      "arguments": [
+      ],
+      "name": "recall"
+    },
+    "save": {
+      "arguments": [
+      ],
+      "name": "save"
+    }
+  },
+  "name": "Settings",
+  "status": "proposed"
+}

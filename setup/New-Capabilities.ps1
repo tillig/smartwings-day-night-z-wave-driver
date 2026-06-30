@@ -10,7 +10,8 @@
 
     Capabilities created:
       - <namespace>.blackout / .sheer / .open (scene buttons)
-      - <namespace>.favorite (save + recall a both-rail favorite)
+      - <namespace>.presetPosition (saved favorite readout)
+      - <namespace>.settings (save + activate favorite buttons)
 
     The capability namespace is assigned by SmartThings per account. The driver
     source (driver/profiles/*.yml and driver/src/init.lua) currently references
@@ -237,10 +238,15 @@ $openId = New-Capability `
     -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'open.presentation.json') `
     -FriendlyName 'Open'
 
-$favoriteId = New-Capability `
-    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'favorite.capability.json') `
-    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'favorite.presentation.json') `
-    -FriendlyName 'Favorite'
+$presetId = New-Capability `
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'presetPosition.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'presetPosition.presentation.json') `
+    -FriendlyName 'Preset position'
+
+$settingsId = New-Capability `
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'settings.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'settings.presentation.json') `
+    -FriendlyName 'Settings'
 
 ###############################################################################
 # Namespace check: warn if the account namespace != what the driver hardcodes
@@ -250,7 +256,7 @@ Write-Host "`n=== Namespace Verification ===" -ForegroundColor Cyan
 
 # Extract the namespace portion from any of the returned IDs (format: namespace.name).
 $detectedNamespace = $null
-foreach ($id in @($blackoutId, $sheerId, $openId, $favoriteId)) {
+foreach ($id in @($blackoutId, $sheerId, $openId, $presetId, $settingsId)) {
     if ($id -and $id -match '^([^.]+)\.') {
         $detectedNamespace = $Matches[1]
         break
@@ -309,7 +315,8 @@ Files to update (search/replace '$knownNamespace' -> '$detectedNamespace'):
 
 Write-Host "`n=== Summary ===" -ForegroundColor Cyan
 Write-Host "  scene button IDs    : $blackoutId, $sheerId, $openId"
-Write-Host "  favorite ID         : $favoriteId"
+Write-Host "  presetPosition ID   : $presetId"
+Write-Host "  settings ID         : $settingsId"
 Write-Host ''
 Write-Host 'Capabilities step complete.' -ForegroundColor Green
 Write-Host 'Next: run ./Deploy-Driver.ps1 (or ./Initialize-Driver.ps1) to package and install the driver.' -ForegroundColor Cyan

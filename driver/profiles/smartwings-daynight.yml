@@ -45,7 +45,9 @@ components:
   - id: favorite
     label: Favorite
     capabilities:
-      - id: happyvessel61954.favorite
+      - id: happyvessel61954.presetPosition
+        version: 1
+      - id: happyvessel61954.settings
         version: 1
     categories:
       - name: Blind
