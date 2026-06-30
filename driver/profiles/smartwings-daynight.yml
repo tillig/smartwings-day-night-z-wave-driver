@@ -10,7 +10,9 @@ components:
   #
   # "main" reads as an ordinary window shade for Google Home / voice:
   #   open  = bottom rail up (see out)      close = bottom rail down (covered)
-  # "scene" holds the day/night scene picker + apply button.
+  # "scene" holds three scene push-buttons (Blackout / Sheer / Open); each fires
+  #   immediately. (A custom capability can't render a row of always-fire buttons
+  #   any other way -- 'list' is a dropdown -- so we use one pushButton each.)
   # "favorite" holds the save/recall of a full both-rail position.
   #
   # The MIDDLE rail (sheer) is NOT a component here. It is exposed only via the
@@ -32,7 +34,11 @@ components:
   - id: scene
     label: Scene
     capabilities:
-      - id: happyvessel61954.dayNightScene
+      - id: happyvessel61954.dayNightBlackout
+        version: 1
+      - id: happyvessel61954.dayNightSheer
+        version: 1
+      - id: happyvessel61954.dayNightOpen
         version: 1
     categories:
       - name: Blind

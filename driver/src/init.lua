@@ -20,16 +20,16 @@
 -- UX (parent device components):
 --   * "main"  presents the BOTTOM rail as an ordinary window shade so that
 --     Google Home / voice "open|close|set NN%" behave like a normal blind.
---   * "scene" offers one-tap day/night scenes as a row of buttons (each fires
---     immediately, like the stock shade's open/close/pause): Blackout / Sheer / Open.
+--   * "scene" offers one-tap day/night scenes as three push-buttons (each fires
+--     immediately): Blackout / Sheer / Open.
 --   * "favorite" saves/recalls a full both-rail position (gear + button).
 -- The MIDDLE rail (sheer) has NO parent component; it is exposed only through a
 -- CHILD device ("<label> Sheer") -- an ordinary window shade so Google Home can
 -- voice-control the sheer (open = full sheer) -- so the sheer appears just once.
 --
--- CUSTOM CAPABILITIES: this driver references two custom capabilities whose IDs
--- embed a per-SmartThings-account namespace prefix (here "happyvessel61954."):
---   happyvessel61954.dayNightScene    (button row: Blackout / Sheer / Open)
+-- CUSTOM CAPABILITIES: this driver references several custom capabilities whose
+-- IDs embed a per-SmartThings-account namespace prefix (here "happyvessel61954."):
+--   happyvessel61954.dayNightBlackout / dayNightSheer / dayNightOpen (scene buttons)
 --   happyvessel61954.dayNightFavorite (save + recall a both-rail favorite)
 -- Their source definitions live in driver/capabilities/*.json. A DIFFERENT account
 -- gets a DIFFERENT namespace, so a fork must recreate them and find/replace the
@@ -58,14 +58,15 @@ local BOTTOM_COMPONENT = "main"   -- bottom rail, Z-Wave endpoint 1 (a real UI c
 -- the middle rail is surfaced only through the child "Sheer" device, so the sheer
 -- never appears twice. Do not emit display events to this key on the parent.
 local SHEER_COMPONENT = "sheer"
-local SCENE_COMPONENT = "scene"   -- day/night scene picker + buttons (no endpoint)
 local BOTTOM_EP = 1
 local MIDDLE_EP = 2
 
--- Custom "day/night scene" capability: a row of buttons (Blackout / Sheer / Open),
--- each firing setScene immediately (rendered as a `list` like the stock shade's
--- open/close/pause). Replaces the old mode dropdown + apply button.
-local SCENE_CAP = "happyvessel61954.dayNightScene"
+-- Custom "day/night scene" buttons: one stateless push-button capability per
+-- scene (Blackout / Sheer / Open), each firing its `push` command immediately.
+-- (A custom capability can't render a row of always-fire buttons any other way --
+-- `list` is a dropdown -- so we use a separate pushButton capability per scene.)
+-- Capability IDs: happyvessel61954.dayNight{Blackout,Sheer,Open}; handlers are
+-- registered explicitly in the driver template below.
 -- Custom "day/night favorite" capability: save (gear) + recall (button) of a
 -- full both-rail position, with a string readout of the saved value. Modeled on
 -- the stock windowShadePreset, but it stores BOTH rails (stock holds only one).
@@ -98,7 +99,6 @@ local RAIL_STAGGER = 2.5
 local MODE_BLACKOUT = "Blackout"
 local MODE_SHEER = "Sheer"
 local MODE_OPEN = "Open"
-local SUPPORTED_MODES = { MODE_BLACKOUT, MODE_SHEER, MODE_OPEN }
 
 -- The motor treats 99 as "100%". Map between the SmartThings 0-100 scale and
 -- the Z-Wave 0-99 wire scale.
@@ -204,34 +204,6 @@ local function sync_sheer_child(device, middle_height)
   end
   child:emit_event(state)
   child:emit_event(capabilities.windowShadeLevel.shadeLevel(sheer))
-end
-
---------------------------------------------------------------------------------
--- Scene / mode display
---------------------------------------------------------------------------------
-
--- The current scene the rails sit on (one of SUPPORTED_MODES), or the last scene
--- invoked when the rails are between named scenes. Since the true state is two
--- rail heights (not an enum), this is a best-effort label for the button row.
-local function current_scene(device)
-  local middle, bottom = get_middle(device), get_bottom(device)
-  if middle >= 100 and bottom <= 0 then
-    return MODE_BLACKOUT
-  elseif middle <= 0 and bottom <= 0 then
-    return MODE_SHEER
-  elseif middle >= 100 and bottom >= 100 then
-    return MODE_OPEN
-  end
-  return device:get_latest_state(SCENE_COMPONENT, SCENE_CAP, "scene") or MODE_BLACKOUT
-end
-
--- Publish the supported scene list (so the button row renders) and the current
--- highlighted scene.
-local function emit_scene(device, scene)
-  device:emit_component_event(device.profile.components[SCENE_COMPONENT],
-    capabilities[SCENE_CAP].supportedScenes(SUPPORTED_MODES, { visibility = { displayed = false } }))
-  device:emit_component_event(device.profile.components[SCENE_COMPONENT],
-    capabilities[SCENE_CAP].scene(scene))
 end
 
 --------------------------------------------------------------------------------
@@ -372,7 +344,7 @@ local function recall_favorite(driver, device, command)
   move_to(device, middle, bottom)
 end
 
--- Drive the rails to a named scene. Returns false for an unknown scene.
+-- Drive the rails to a named scene.
 local function apply_scene(device, scene)
   if scene == MODE_BLACKOUT then
     move_to(device, 100, 0)
@@ -382,15 +354,14 @@ local function apply_scene(device, scene)
     move_to(device, 100, 100)
   else
     log.warn("apply_scene: unknown scene " .. tostring(scene))
-    return false
   end
-  emit_scene(device, scene)
-  return true
 end
 
--- setScene: one of the scene buttons (Blackout / Sheer / Open) was tapped.
-local function set_scene(driver, device, command)
-  apply_scene(device, command.args.scene)
+-- Each scene push-button's `push` command maps to a fixed scene.
+local function make_scene_button(scene)
+  return function(driver, device, command)
+    apply_scene(device, scene)
+  end
 end
 
 
@@ -411,8 +382,6 @@ local function switch_multilevel_report(driver, device, cmd)
     device:set_field(FIELD_BOTTOM, height)
     emit_bottom(device, height)
   end
-
-  emit_scene(device, current_scene(device))
 end
 
 --------------------------------------------------------------------------------
@@ -429,7 +398,6 @@ local function device_init(self, device)
   if device.network_type == "DEVICE_EDGE_CHILD" then return end
   device:set_component_to_endpoint_fn(component_to_endpoint)
   device:set_endpoint_to_component_fn(endpoint_to_component)
-  emit_scene(device, current_scene(device))
   emit_favorite(device)
   ensure_sheer_child(self, device)
 end
@@ -446,7 +414,6 @@ local function device_added(self, device)
   device:emit_component_event(device.profile.components[BOTTOM_COMPONENT],
     capabilities.windowShade.supportedWindowShadeCommands(
       { "open", "close", "pause" }, { visibility = { displayed = false } }))
-  emit_scene(device, current_scene(device))
   emit_favorite(device)
   ensure_sheer_child(self, device)
   refresh_positions(device)
@@ -478,9 +445,9 @@ local driver_template = {
     [capabilities.refresh.ID] = {
       [capabilities.refresh.commands.refresh.NAME] = do_refresh,
     },
-    [SCENE_CAP] = {
-      ["setScene"] = set_scene,
-    },
+    ["happyvessel61954.dayNightBlackout"] = { ["push"] = make_scene_button(MODE_BLACKOUT) },
+    ["happyvessel61954.dayNightSheer"] = { ["push"] = make_scene_button(MODE_SHEER) },
+    ["happyvessel61954.dayNightOpen"] = { ["push"] = make_scene_button(MODE_OPEN) },
     [FAVORITE_CAP] = {
       ["save"] = save_favorite,
       ["recall"] = recall_favorite,

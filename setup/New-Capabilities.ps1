@@ -9,7 +9,7 @@
     presentations to your SmartThings account using the SmartThings CLI.
 
     Capabilities created:
-      - <namespace>.dayNightScene     (button row: Blackout / Sheer / Open)
+      - <namespace>.dayNightBlackout / dayNightSheer / dayNightOpen (scene buttons)
       - <namespace>.dayNightFavorite  (save + recall a both-rail favorite)
 
     The capability namespace is assigned by SmartThings per account. The driver
@@ -222,10 +222,20 @@ function New-Capability {
 # Main: create/verify all three capabilities
 ###############################################################################
 
-$sceneId = New-Capability `
-    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightScene.capability.json') `
-    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightScene.presentation.json') `
-    -FriendlyName 'dayNightScene'
+$blackoutId = New-Capability `
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightBlackout.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightBlackout.presentation.json') `
+    -FriendlyName 'dayNightBlackout'
+
+$sheerId = New-Capability `
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightSheer.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightSheer.presentation.json') `
+    -FriendlyName 'dayNightSheer'
+
+$openId = New-Capability `
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightOpen.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightOpen.presentation.json') `
+    -FriendlyName 'dayNightOpen'
 
 $favoriteId = New-Capability `
     -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightFavorite.capability.json') `
@@ -240,7 +250,7 @@ Write-Host "`n=== Namespace Verification ===" -ForegroundColor Cyan
 
 # Extract the namespace portion from any of the returned IDs (format: namespace.name).
 $detectedNamespace = $null
-foreach ($id in @($sceneId, $favoriteId)) {
+foreach ($id in @($blackoutId, $sheerId, $openId, $favoriteId)) {
     if ($id -and $id -match '^([^.]+)\.') {
         $detectedNamespace = $Matches[1]
         break
@@ -298,7 +308,7 @@ Files to update (search/replace '$knownNamespace' -> '$detectedNamespace'):
 ###############################################################################
 
 Write-Host "`n=== Summary ===" -ForegroundColor Cyan
-Write-Host "  dayNightScene ID    : $sceneId"
+Write-Host "  scene button IDs    : $blackoutId, $sheerId, $openId"
 Write-Host "  dayNightFavorite ID : $favoriteId"
 Write-Host ''
 Write-Host 'Capabilities step complete.' -ForegroundColor Green
