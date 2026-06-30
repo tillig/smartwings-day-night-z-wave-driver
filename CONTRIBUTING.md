@@ -18,24 +18,28 @@
   - `profiles/` — device profiles. `smartwings-daynight` is the real device; `smartwings-sheer` is the child "Sheer" device; `smartwings-daynight-diagnostic` is unused but kept for hardware debugging (two raw motor sliders).
   - `src/init.lua` — all driver logic: component↔endpoint mapping, coordinate math, scene handling, child-device management, Z-Wave report handling, and capability command handlers.
   - `capabilities/` — source JSON for the custom capabilities (a `.capability.json` and `.presentation.json` per capability).
-- **`setup/`** — PowerShell automation for installing and updating the driver.
+- **`setup/`** — PowerShell automation: `New-Capabilities.ps1` (create the custom capabilities), `Deploy-Driver.ps1` (package + assign + force-install), `Initialize-Driver.ps1` (first-time orchestrator), and `Test-Shade.ps1` (per-shade sanity check / cleanup).
 - **`assets/`** — the SmartWings Z-Wave programming guide PDF.
-- **`.github/`** — CI workflow.
+- **`.github/`** — CI workflow + the PSScriptAnalyzer hook script.
 
 ## Coordinate Model
 
 The firmware uses a single vertical scale: **value = rail HEIGHT**, 0 = window bottom, 100 = window top. Higher = more open.
 
-- **Bottom rail** = Z-Wave endpoint 1, component `main`
-- **Middle rail** = Z-Wave endpoint 2, component `sheer`
+- **Bottom rail** = Z-Wave endpoint 1 (the `main` window-shade component)
+- **Middle rail** = Z-Wave endpoint 2 (no parent UI component; surfaced via the child "Sheer" device). `sheer` remains the internal routing key for that endpoint.
 - **Sheer%** displayed = `100 - middle_height`
 - **Hard rule:** `middle >= bottom` (firmware-enforced; the driver orders the two motor commands and staggers them by ~2.5 s so both motors run simultaneously without the firmware rejecting a cross)
 
-The `FIELD_MIDDLE` / `FIELD_BOTTOM` device fields are the single source of truth for coupling math — the driver never reads back through the inverted sheer display value.
+The `FIELD_MIDDLE` / `FIELD_BOTTOM` device fields are the single source of truth for coupling math — the driver never reads back through the inverted sheer display value. They are persisted (`{ persist = true }`) so positions survive driver reloads; `device_init` also re-queries both rails so the display (and the child Sheer device) self-correct after an update.
+
+**Note on lazy motors:** these motors reliably answer a `SET` (position command) but often ignore a bare `GET` (refresh), even for 60+ seconds. So the dependable way to resync displayed state is a position command (e.g. recalling the favorite), which is what `Test-Shade.ps1 -Force` does.
+
+**Deferred optimization — simultaneous motion.** A full-travel move (Open, Sheer, recall from afar) currently moves the two rails one at a time with a ~2.5 s stagger to avoid the firmware rejecting a cross. The physical remote can run both motors at once using continuous-motion commands (`SWITCH_MULTILEVEL` `StartLevelChange`/`StopLevelChange`), which skip the absolute-position validation. Switching full-travel scenes to that approach would shave a few seconds, but needs careful re-testing of the no-cross safety (continuous motion doesn't self-clamp the way absolute SETs do). Left as-is because the staggered approach is proven correct.
 
 ## Custom Capabilities
 
-The driver uses two custom capabilities, which live in the SmartThings account (not in the driver package):
+The driver uses five custom capabilities, which live in the SmartThings account (not in the driver package):
 
 | Capability | ID | Purpose |
 | --- | --- | --- |

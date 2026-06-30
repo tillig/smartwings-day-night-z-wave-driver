@@ -6,7 +6,7 @@ A SmartThings Edge driver (Lua, runs on the hub) for [SmartWings day/night cellu
 
 - [How It Works](#how-it-works)
 - [What You See in the App](#what-you-see-in-the-app)
-  - [Scene Modes](#scene-modes)
+  - [Scenes](#scenes)
   - [Why the Sheer Is a Separate Device](#why-the-sheer-is-a-separate-device)
 - [Voice Control (Google Home)](#voice-control-google-home)
 - [Install](#install)
@@ -44,18 +44,18 @@ Each shade shows up as **two devices**:
 
 **The main shade** (e.g. "Family Room Shade") controls the opaque/bottom rail and the day/night scenes:
 
-| Section     | What it is                                  | What it controls                                          |
+| Section | What it is | What it controls |
 | ----------- | ------------------------------------------- | --------------------------------------------------------- |
-| **Shade**   | Window shade tile with Open/Close/Pause + % | Bottom rail. 0% = closed/covered, 100% = open/see-through |
-| **Scene**   | Buttons: Blackout / Sheer / Open            | One-tap preset positions for both rails (see below)       |
-| **Favorite**| Save (gear) + Go button + readout           | Saves and recalls a full both-rail position you like      |
-| **Battery** | Battery level                               | —                                                         |
+| **Shade** | Window shade tile with Open/Close/Pause + % | Bottom rail. 0% = closed/covered, 100% = open/see-through |
+| **Scene** | Buttons: Blackout / Sheer / Open | One tap moves both rails to that preset (see below) |
+| **Favorite** | "Preset position" readout + "Settings" Save/Activate buttons | Save the current both-rail position and recall it later |
+| **Battery** | Battery level | — |
 
 **The sheer device** (e.g. "Family Room Shade Sheer") controls the sheer/middle rail as its own shade: open = full sheer, close = no sheer, or set a percentage. It lives as a separate device so it works by voice — see [Why the sheer is a separate device](#why-the-sheer-is-a-separate-device).
 
-### Scene Modes
+### Scenes
 
-| Mode         | Position                                    |
+| Scene        | Position                                    |
 | ------------ | ------------------------------------------- |
 | **Blackout** | Middle up, bottom down — maximum privacy    |
 | **Sheer**    | Both rails down — full sheer fabric visible |
@@ -63,7 +63,7 @@ Each shade shows up as **two devices**:
 
 Each scene is a button — tap **Blackout**, **Sheer**, or **Open** and the shade moves there immediately.
 
-**Favorite**: tap the gear to save wherever both rails are right now, then the Go button restores that look in one tap.
+**Favorite**: tap **Save favorite setting** to remember wherever both rails are right now; **Activate favorite** restores that look in one tap. The "Preset position" readout shows the saved position (e.g. "Sheer 24% / Open 0%").
 
 ### Why the Sheer Is a Separate Device
 
@@ -78,7 +78,7 @@ The driver creates two devices in Google Home:
 | `<your shade name>`       | "open the blinds", "close the blinds", "set the blinds to 50%" | Bottom rail (opaque shade) |
 | `<your shade name> Sheer` | "open the sheer", "set the sheer to 50%"                       | Middle rail (sheer fabric) |
 
-For scenes/Favorite: create SmartThings Scenes (Google Home exposes those as voice commands).
+The day/night scenes and Favorite aren't directly voice-controllable (they're custom controls Google doesn't expose), but you can reach them by voice with a **SmartThings Scene**: in the app, **Routines → Scenes → Add scene**, set the main shade and the Sheer device to the positions you want (e.g. Shade 0% + Sheer 24% for your favorite), and name it something speakable. Google Home imports SmartThings Scenes automatically, so then *"Hey Google, activate &lt;scene name&gt;"* works.
 
 ## Install
 
@@ -99,8 +99,8 @@ The `setup/` directory contains PowerShell scripts that automate everything (cre
 
 1. Run `setup/New-Capabilities.ps1` to create the custom capabilities in your SmartThings account.
 2. Run `setup/Deploy-Driver.ps1 -ChannelName '<name>' -CreateChannel -HubId <your-hub-id>` to create a channel, package the driver, and install it. (`smartthings devices --type HUB` lists your hub IDs.)
-3. In the SmartThings app, go to the device → **⋮** → **Driver** → select **SmartWings Day/Night Z-Wave**.
-4. Delete the two old junk child devices left behind by the stock driver (they will show up as unrecognized devices).
+3. In the SmartThings app, go to the shade → **⋮** → **Driver** → select **SmartWings Day/Night Z-Wave**.
+4. Run `setup/Test-Shade.ps1 -DeviceLabel '<your shade name>'` to tidy up: it deletes the leftover junk child devices from the stock driver, confirms the shade is set up correctly, and prints a health summary.
 
 **Later, to deploy an updated version of the driver**, just run:
 
@@ -108,7 +108,9 @@ The `setup/` directory contains PowerShell scripts that automate everything (cre
 ./setup/Deploy-Driver.ps1
 ```
 
-It remembers your channel after the first run, so upgrades are a single command with no arguments.
+It remembers your channel and hub after the first run, so upgrades are a single command with no arguments.
+
+> **Adding another shade?** Pair it to SmartThings, switch it to this driver (step 3), then run `Test-Shade.ps1` (step 4). That's it — the driver finds both motors itself, even if the stock driver only showed one.
 
 ### Option B — Manual Install
 
@@ -151,7 +153,7 @@ It remembers your channel after the first run, so upgrades are a single command 
    ```
 
 6. In the SmartThings app, go to the device → **⋮** → **Driver** → select **SmartWings Day/Night Z-Wave**.
-7. Delete the two old junk child devices left behind by the stock driver.
+7. Run `setup/Test-Shade.ps1 -DeviceLabel '<your shade name>'` to delete the leftover junk child devices and verify setup (or delete the "Z-Wave Device Multichannel" children by hand).
 
 ### Custom Capabilities Caveat
 
