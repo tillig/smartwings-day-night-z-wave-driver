@@ -34,18 +34,18 @@ components:
   - id: scene
     label: Scene
     capabilities:
-      - id: happyvessel61954.dayNightBlackout
+      - id: happyvessel61954.blackout
         version: 1
-      - id: happyvessel61954.dayNightSheer
+      - id: happyvessel61954.sheer
         version: 1
-      - id: happyvessel61954.dayNightOpen
+      - id: happyvessel61954.open
         version: 1
     categories:
       - name: Blind
   - id: favorite
     label: Favorite
     capabilities:
-      - id: happyvessel61954.dayNightFavorite
+      - id: happyvessel61954.favorite
         version: 1
     categories:
       - name: Blind

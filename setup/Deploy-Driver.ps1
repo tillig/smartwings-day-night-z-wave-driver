@@ -78,7 +78,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Path $PSScriptRoot -Parent
 $driverDir = Join-Path -Path $repoRoot -ChildPath 'driver'
 $cacheDir = Join-Path -Path $PSScriptRoot -ChildPath '.local'
 $cacheFile = Join-Path -Path $cacheDir -ChildPath 'channel-id'

@@ -115,20 +115,20 @@ It remembers your channel after the first run, so upgrades are a single command 
 1. Create the custom capabilities from `driver/capabilities/`:
 
    ```powershell
-   smartthings capabilities:create -i driver/capabilities/dayNightBlackout.capability.json
-   smartthings capabilities:presentation:create <id> -i driver/capabilities/dayNightBlackout.presentation.json
+   smartthings capabilities:create -i driver/capabilities/blackout.capability.json
+   smartthings capabilities:presentation:create <id> -i driver/capabilities/blackout.presentation.json
 
-   smartthings capabilities:create -i driver/capabilities/dayNightSheer.capability.json
-   smartthings capabilities:presentation:create <id> -i driver/capabilities/dayNightSheer.presentation.json
+   smartthings capabilities:create -i driver/capabilities/sheer.capability.json
+   smartthings capabilities:presentation:create <id> -i driver/capabilities/sheer.presentation.json
 
-   smartthings capabilities:create -i driver/capabilities/dayNightOpen.capability.json
-   smartthings capabilities:presentation:create <id> -i driver/capabilities/dayNightOpen.presentation.json
+   smartthings capabilities:create -i driver/capabilities/open.capability.json
+   smartthings capabilities:presentation:create <id> -i driver/capabilities/open.presentation.json
 
-   smartthings capabilities:create -i driver/capabilities/dayNightFavorite.capability.json
-   smartthings capabilities:presentation:create <id> -i driver/capabilities/dayNightFavorite.presentation.json
+   smartthings capabilities:create -i driver/capabilities/favorite.capability.json
+   smartthings capabilities:presentation:create <id> -i driver/capabilities/favorite.presentation.json
    ```
 
-2. Note the assigned capability IDs (they'll have your account namespace prefix, e.g. `yournamespace.dayNightBlackout`). Update the namespace prefix in `driver/profiles/*.yml` and `driver/src/init.lua` if it differs from `happyvessel61954.` — see [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+2. Note the assigned capability IDs (they'll have your account namespace prefix, e.g. `yournamespace.blackout`). Update the namespace prefix in `driver/profiles/*.yml` and `driver/src/init.lua` if it differs from `happyvessel61954.` — see [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 3. Create a channel (the command prompts for a name and description; choose type `DRIVER`). Note the channel ID it prints:
 
    ```powershell

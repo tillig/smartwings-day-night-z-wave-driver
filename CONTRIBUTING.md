@@ -39,8 +39,8 @@ The driver uses two custom capabilities, which live in the SmartThings account (
 
 | Capability | ID | Purpose |
 | --- | --- | --- |
-| Day Night scene buttons | `<namespace>.dayNightBlackout`, `.dayNightSheer`, `.dayNightOpen` | One stateless push-button per scene; each `push` drives the rails to that scene immediately |
-| Day Night Favorite | `<namespace>.dayNightFavorite` | Save (gear) and recall (button) a full both-rail favorite position, with a readout of the saved value |
+| Scene buttons | `<namespace>.blackout`, `.sheer`, `.open` | One stateless push-button per scene; each `push` drives the rails to that scene immediately |
+| Favorite | `<namespace>.favorite` | Save (gear) and recall (button) a full both-rail favorite position, with a readout of the saved value |
 
 Create them with the CLI (or `setup/New-Capabilities.ps1`, which does all of them):
 
@@ -49,7 +49,7 @@ smartthings capabilities:create -i driver/capabilities/<name>.capability.json
 smartthings capabilities:presentation:create <capabilityId> -i driver/capabilities/<name>.presentation.json
 ```
 
-The resulting ID takes the form `<accountNamespace>.<name>` (e.g. `happyvessel61954.dayNightBlackout`). The namespace is assigned per SmartThings account, and `driver/profiles/smartwings-daynight.yml` and `driver/src/init.lua` hardcode the prefix `happyvessel61954.`. **To run this on a different account**, find your namespace (`smartthings capabilities:namespaces`), then find-and-replace `happyvessel61954.` with it in those two files before packaging.
+The resulting ID takes the form `<accountNamespace>.<name>` (e.g. `happyvessel61954.blackout`). The namespace is assigned per SmartThings account, and `driver/profiles/smartwings-daynight.yml` and `driver/src/init.lua` hardcode the prefix `happyvessel61954.`. **To run this on a different account**, find your namespace (`smartthings capabilities:namespaces`), then find-and-replace `happyvessel61954.` with it in those two files before packaging.
 
 ## Development Workflow
 
@@ -97,9 +97,9 @@ Scenes are stored as rail heights `{middle, bottom}`:
 | Sheer | 0 | 0 |
 | Open | 100 | 100 |
 
-The Scene component uses three stateless push-button capabilities (`dayNightBlackout`, `dayNightSheer`, `dayNightOpen`) — one button each, and each `push` drives both rails to that scene immediately. (A custom capability can't render a single control as a row of always-fire buttons: `displayType: list` is a dropdown, and only the built-in `windowShade` gets the platform's special button treatment. One `pushButton` capability per scene is how you get genuine immediate-fire buttons.)
+The Scene component uses three stateless push-button capabilities (`blackout`, `sheer`, `open`) — one button each, and each `push` drives both rails to that scene immediately. (A custom capability can't render a single control as a row of always-fire buttons: `displayType: list` is a dropdown, and only the built-in `windowShade` gets the platform's special button treatment. One `pushButton` capability per scene is how you get genuine immediate-fire buttons.)
 
-Separately, the **Favorite** control (custom `dayNightFavorite` capability on the `favorite` component) stores a full `{middle, bottom}` position: the gear saves the current position, the button recalls it. It defaults to `{middle: 76, bottom: 0}` (sheer ~24%) until the user saves their own.
+Separately, the **Favorite** control (custom `favorite` capability on the `favorite` component) stores a full `{middle, bottom}` position: the gear saves the current position, the button recalls it. It defaults to `{middle: 76, bottom: 0}` (sheer ~24%) until the user saves their own.
 
 ## Child "Sheer" Device
 

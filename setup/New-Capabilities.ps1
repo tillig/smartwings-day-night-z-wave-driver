@@ -9,8 +9,8 @@
     presentations to your SmartThings account using the SmartThings CLI.
 
     Capabilities created:
-      - <namespace>.dayNightBlackout / dayNightSheer / dayNightOpen (scene buttons)
-      - <namespace>.dayNightFavorite  (save + recall a both-rail favorite)
+      - <namespace>.blackout / .sheer / .open (scene buttons)
+      - <namespace>.favorite (save + recall a both-rail favorite)
 
     The capability namespace is assigned by SmartThings per account. The driver
     source (driver/profiles/*.yml and driver/src/init.lua) currently references
@@ -57,7 +57,7 @@ $ErrorActionPreference = 'Stop'
 ###############################################################################
 
 # setup/ is one level below repo root; driver/ is a sibling of setup/.
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Path $PSScriptRoot -Parent
 $driverDir = Join-Path -Path $repoRoot -ChildPath 'driver'
 $capDir = Join-Path -Path $driverDir -ChildPath 'capabilities'
 $profileDir = Join-Path -Path $driverDir -ChildPath 'profiles'
@@ -223,24 +223,24 @@ function New-Capability {
 ###############################################################################
 
 $blackoutId = New-Capability `
-    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightBlackout.capability.json') `
-    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightBlackout.presentation.json') `
-    -FriendlyName 'dayNightBlackout'
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'blackout.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'blackout.presentation.json') `
+    -FriendlyName 'Blackout'
 
 $sheerId = New-Capability `
-    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightSheer.capability.json') `
-    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightSheer.presentation.json') `
-    -FriendlyName 'dayNightSheer'
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'sheer.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'sheer.presentation.json') `
+    -FriendlyName 'Sheer'
 
 $openId = New-Capability `
-    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightOpen.capability.json') `
-    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightOpen.presentation.json') `
-    -FriendlyName 'dayNightOpen'
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'open.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'open.presentation.json') `
+    -FriendlyName 'Open'
 
 $favoriteId = New-Capability `
-    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightFavorite.capability.json') `
-    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'dayNightFavorite.presentation.json') `
-    -FriendlyName 'dayNightFavorite'
+    -CapabilityJsonPath (Join-Path -Path $capDir -ChildPath 'favorite.capability.json') `
+    -PresentationJsonPath (Join-Path -Path $capDir -ChildPath 'favorite.presentation.json') `
+    -FriendlyName 'Favorite'
 
 ###############################################################################
 # Namespace check: warn if the account namespace != what the driver hardcodes
@@ -309,7 +309,7 @@ Files to update (search/replace '$knownNamespace' -> '$detectedNamespace'):
 
 Write-Host "`n=== Summary ===" -ForegroundColor Cyan
 Write-Host "  scene button IDs    : $blackoutId, $sheerId, $openId"
-Write-Host "  dayNightFavorite ID : $favoriteId"
+Write-Host "  favorite ID         : $favoriteId"
 Write-Host ''
 Write-Host 'Capabilities step complete.' -ForegroundColor Green
 Write-Host 'Next: run ./Deploy-Driver.ps1 (or ./Initialize-Driver.ps1) to package and install the driver.' -ForegroundColor Cyan

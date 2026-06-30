@@ -29,8 +29,8 @@
 --
 -- CUSTOM CAPABILITIES: this driver references several custom capabilities whose
 -- IDs embed a per-SmartThings-account namespace prefix (here "happyvessel61954."):
---   happyvessel61954.dayNightBlackout / dayNightSheer / dayNightOpen (scene buttons)
---   happyvessel61954.dayNightFavorite (save + recall a both-rail favorite)
+--   happyvessel61954.blackout / .sheer / .open (scene push-buttons)
+--   happyvessel61954.favorite (save + recall a both-rail favorite)
 -- Their source definitions live in driver/capabilities/*.json. A DIFFERENT account
 -- gets a DIFFERENT namespace, so a fork must recreate them and find/replace the
 -- prefix here and in profiles/*.yml. See CONTRIBUTING.md.
@@ -65,12 +65,12 @@ local MIDDLE_EP = 2
 -- scene (Blackout / Sheer / Open), each firing its `push` command immediately.
 -- (A custom capability can't render a row of always-fire buttons any other way --
 -- `list` is a dropdown -- so we use a separate pushButton capability per scene.)
--- Capability IDs: happyvessel61954.dayNight{Blackout,Sheer,Open}; handlers are
+-- Capability IDs: happyvessel61954.blackout / .sheer / .open; handlers are
 -- registered explicitly in the driver template below.
 -- Custom "day/night favorite" capability: save (gear) + recall (button) of a
 -- full both-rail position, with a string readout of the saved value. Modeled on
 -- the stock windowShadePreset, but it stores BOTH rails (stock holds only one).
-local FAVORITE_CAP = "happyvessel61954.dayNightFavorite"
+local FAVORITE_CAP = "happyvessel61954.favorite"
 
 -- Persisted favorite position {middle, bottom}. Defaults match the user's typical
 -- favorite until they save their own.
@@ -448,9 +448,9 @@ local driver_template = {
     [capabilities.refresh.ID] = {
       [capabilities.refresh.commands.refresh.NAME] = do_refresh,
     },
-    ["happyvessel61954.dayNightBlackout"] = { ["push"] = make_scene_button(MODE_BLACKOUT) },
-    ["happyvessel61954.dayNightSheer"] = { ["push"] = make_scene_button(MODE_SHEER) },
-    ["happyvessel61954.dayNightOpen"] = { ["push"] = make_scene_button(MODE_OPEN) },
+    ["happyvessel61954.blackout"] = { ["push"] = make_scene_button(MODE_BLACKOUT) },
+    ["happyvessel61954.sheer"] = { ["push"] = make_scene_button(MODE_SHEER) },
+    ["happyvessel61954.open"] = { ["push"] = make_scene_button(MODE_OPEN) },
     [FAVORITE_CAP] = {
       ["save"] = save_favorite,
       ["recall"] = recall_favorite,
