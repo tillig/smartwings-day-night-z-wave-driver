@@ -35,10 +35,16 @@ child devices from the stock driver.
 
 ## Deploying Updates
 
-After a code change, push a new build with `Deploy-Driver.ps1`. It remembers your
-channel after the first run, so routine upgrades take no arguments:
+After a code change, push a new build with `Deploy-Driver.ps1`. It packages the
+driver, assigns it to your channel, and forces your hub to install it. It
+remembers your channel and hub after the first run, so routine upgrades take no
+arguments:
 
 ```powershell
+# First time — name your channel and hub (both get cached):
+./setup/Deploy-Driver.ps1 -ChannelName '<your-channel-name>' -HubId '<your-hub-id>'
+
+# Every time after that:
 ./setup/Deploy-Driver.ps1
 ```
 
@@ -48,7 +54,7 @@ channel after the first run, so routine upgrades take no arguments:
 | --- | --- |
 | `Initialize-Driver.ps1` | First-time orchestrator: runs `New-Capabilities.ps1` then `Deploy-Driver.ps1`. |
 | `New-Capabilities.ps1` | Creates (or verifies) the custom capabilities and presentations. Warns if your account namespace differs from the one hardcoded in the driver. |
-| `Deploy-Driver.ps1` | Packages and assigns the driver for both first install and upgrades. Resolves the channel (explicit `-ChannelId`, cached, by `-ChannelName`, or `-CreateChannel`), and installs on a hub when `-HubId` is given. |
+| `Deploy-Driver.ps1` | Packages and assigns the driver for both first install and upgrades, then forces the hub to install the new version. Resolves the channel (explicit `-ChannelId`, cached, by `-ChannelName`, or `-CreateChannel`) and the hub (`-HubId` or cached); both are cached for argument-free re-runs. |
 
 All scripts accept `-Verbose`. Run `Get-Help ./setup/<script>.ps1 -Detailed` for
 full parameter documentation.

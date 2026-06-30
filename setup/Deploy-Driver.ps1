@@ -35,9 +35,12 @@
     one named -ChannelName instead of failing.
 
 .PARAMETER HubId
-    (Optional) If supplied, the driver is also installed directly on this hub.
-    Needed for a first-time install on a hub not yet enrolled in the channel;
-    not needed for routine upgrades.
+    (Optional) The hub to install the new version onto. After packaging, the
+    script forces this hub to pull the just-assigned version -- without this,
+    the hub keeps running its old copy until its periodic (~12h) auto-poll, and
+    re-selecting the driver in the app would re-apply the stale version. The hub
+    ID is cached (setup/.local/hub-id), so after the first run with -HubId,
+    later bare `./Deploy-Driver.ps1` runs install automatically.
 
 .EXAMPLE
     # Everyday upgrade (uses the cached channel):
@@ -76,9 +79,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$driverDir = Join-Path $repoRoot 'driver'
-$cacheDir = Join-Path $PSScriptRoot '.local'
-$cacheFile = Join-Path $cacheDir 'channel-id'
+$driverDir = Join-Path -Path $repoRoot -ChildPath 'driver'
+$cacheDir = Join-Path -Path $PSScriptRoot -ChildPath '.local'
+$cacheFile = Join-Path -Path $cacheDir -ChildPath 'channel-id'
+$hubCacheFile = Join-Path -Path $cacheDir -ChildPath 'hub-id'
 
 Write-Host '=== SmartWings Day/Night: Update / Deploy ===' -ForegroundColor Cyan
 
@@ -198,31 +202,61 @@ if (-not (Test-Path $cacheDir)) { New-Item -ItemType Directory -Path $cacheDir -
 Set-Content -Path $cacheFile -Value $channelId -Encoding ascii
 Write-Verbose "Cached channel ID to $cacheFile"
 
-# --- Step 2: package + assign (+ optional install) --------------------------
-Write-Host "`n=== Step 2: Package + assign$(if ($HubId) { ' + install' }) ===" -ForegroundColor Cyan
+# --- Step 2: package + assign to the channel --------------------------------
+Write-Host "`n=== Step 2: Package + assign ===" -ForegroundColor Cyan
 
-$pkgArgs = @($driverDir, '--channel', $channelId)
-if ($HubId) { $pkgArgs += @('--hub', $HubId) }
-
-Write-Verbose "Running: smartthings edge:drivers:package $($pkgArgs -join ' ') --json"
-$pkgOut = smartthings edge:drivers:package @pkgArgs --json 2>&1
+Write-Verbose "Running: smartthings edge:drivers:package `"$driverDir`" --channel $channelId --json"
+$pkgOut = smartthings edge:drivers:package "$driverDir" --channel $channelId --json 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Package/assign failed:`n$($pkgOut | Out-String)"
 }
 
+# The CLI appends a plain-text "Assigned driver ..." line after the JSON object,
+# so join the lines and parse only the JSON portion (up to the last closing brace).
+$pkgText = ($pkgOut | Out-String)
 $result = $null
-try { $result = $pkgOut | ConvertFrom-Json } catch { Write-Verbose 'Package output was not JSON; continuing without parsed details.' }
+$jsonEnd = $pkgText.LastIndexOf('}')
+if ($jsonEnd -ge 0) {
+    try { $result = $pkgText.Substring(0, $jsonEnd + 1) | ConvertFrom-Json } catch { Write-Verbose 'Could not parse package JSON.' }
+}
 $driverId = if ($result) { if ($result.driverId) { $result.driverId } else { $result.id } } else { $null }
 $version = if ($result) { $result.version } else { $null }
+
+# --- Step 3: force the hub to install the just-assigned version --------------
+# Assigning to the channel does NOT update an enrolled hub right away -- the hub
+# only auto-pulls on its periodic (~12h) poll. So unless we force an install, a
+# driver re-select in the app would re-apply the STALE version still on the hub.
+# Resolve the hub from -HubId or a cached value and install explicitly.
+if (-not $HubId -and (Test-Path $hubCacheFile)) {
+    $HubId = (Get-Content $hubCacheFile -Raw).Trim()
+    if ($HubId) { Write-Verbose "Using cached hub ID: $HubId" }
+}
+
+if ($HubId) {
+    Write-Host "`n=== Step 3: Install on hub (force pull latest) ===" -ForegroundColor Cyan
+    if (-not $driverId) {
+        Write-Error 'Could not determine the driver ID from the package output; cannot force-install.'
+    }
+    Write-Verbose "Running: smartthings edge:drivers:install $driverId --hub $HubId --channel $channelId"
+    $instOut = smartthings edge:drivers:install $driverId --hub $HubId --channel $channelId 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Install on hub failed:`n$($instOut | Out-String)"
+    }
+    # Cache the hub ID so future runs install automatically with no arguments.
+    Set-Content -Path $hubCacheFile -Value $HubId -Encoding ascii
+}
 
 Write-Host "`n=== Done ===" -ForegroundColor Green
 Write-Host "  Channel ID : $channelId"
 if ($driverId) { Write-Host "  Driver ID  : $driverId" }
 if ($version) { Write-Host "  Version    : $version" }
 if ($HubId) {
-    Write-Host "  Installed on hub: $HubId"
+    Write-Host "  Installed on hub: $HubId" -ForegroundColor Green
+    Write-Host 'The hub now has the latest version. For a profile change (added/removed' -ForegroundColor Cyan
+    Write-Host 'components or capabilities), re-select the driver on the device in the app.' -ForegroundColor Cyan
 }
 else {
-    Write-Host 'Enrolled hubs will pick up the new version automatically' -ForegroundColor Cyan
-    Write-Host '(within ~12h, or immediately if you re-select the driver in the app).' -ForegroundColor Cyan
+    Write-Host 'No hub known, so the new version was only assigned to the channel.' -ForegroundColor DarkYellow
+    Write-Host 'Enrolled hubs auto-pull within ~12h. To make it live now, re-run with' -ForegroundColor DarkYellow
+    Write-Host '-HubId <id> (it gets cached, so future runs need no arguments).' -ForegroundColor DarkYellow
 }

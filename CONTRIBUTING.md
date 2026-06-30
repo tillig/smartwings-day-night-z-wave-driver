@@ -65,17 +65,17 @@ pre-commit run --all-files
 smartthings edge:drivers:package driver --build-only out.zip
 ```
 
-Deploy a new build. Releases are a **local** step — there is no CI upload, because SmartThings has no long-lived API token (PATs expire after 24 hours). The simplest path is `setup/Deploy-Driver.ps1`, which resolves your channel (cached after the first run) and packages + assigns the driver:
+Deploy a new build. Releases are a **local** step — there is no CI upload, because SmartThings has no long-lived API token (PATs expire after 24 hours). The simplest path is `setup/Deploy-Driver.ps1`, which resolves your channel and hub (both cached after the first run), packages and assigns the driver, then **forces the hub to install the new version**:
 
 ```powershell
-# First time — point it at your channel by name (then it's cached):
-./setup/Deploy-Driver.ps1 -ChannelName '<your channel name>'
+# First time — name your channel and hub (both get cached):
+./setup/Deploy-Driver.ps1 -ChannelName '<your channel name>' -HubId '<your hub id>'
 
 # Every time after that — no arguments needed:
 ./setup/Deploy-Driver.ps1
 ```
 
-After deploying, **Lua-only changes** hot-reload on the hub automatically, but **profile changes** (adding/removing components or capabilities) require re-selecting the driver in the SmartThings app (Device → **⋮** → **Driver** → re-select **SmartWings Day/Night Z-Wave**) before the new layout appears.
+The force-install matters: assigning to the channel alone does **not** update an enrolled hub right away — the hub only auto-pulls on its periodic (~12 h) poll, so without forcing an install a driver re-select in the app would just re-apply the stale version still on the hub. After deploying, **Lua-only changes** hot-reload on the hub automatically, but **profile changes** (adding/removing components or capabilities) still require re-selecting the driver in the SmartThings app (Device → **⋮** → **Driver** → re-select **SmartWings Day/Night Z-Wave**) before the new layout appears.
 
 To watch hub logs while testing: `smartthings edge:drivers:logcat <driverId> --hub-address <hub-ip>`. The connection is flaky and typically drops after 1–2 minutes, so use short bursts.
 
@@ -85,7 +85,7 @@ To watch hub logs while testing: `smartthings edge:drivers:logcat <driverId> --h
 
 Edge drivers are distributed through **channels**: an author packages a driver and uploads it to a channel, and any hub **subscribed** to that channel pulls the driver down and **auto-updates** whenever a new version is uploaded (hubs poll roughly every 12 hours). Installing a community driver by clicking a shared "channel invitation" link is just subscribing your hub to someone else's channel — that is why such drivers seem to "just work" and update themselves: the author keeps uploading new versions to the channel you're subscribed to.
 
-This project uses the same model, except you are on **both** sides of it: you own the channel *and* you build and upload to it. That is the extra step versus subscribing to someone else's channel — your local code changes don't reach the channel until you run a deploy. Once deployed, the hub auto-pulls it like any other channel update. `Deploy-Driver.ps1` automates the author's side (package, assign to your channel), and the first install also enrolls your hub.
+This project uses the same model, except you are on **both** sides of it: you own the channel *and* you build and upload to it. That is the extra step versus subscribing to someone else's channel — your local code changes don't reach the channel until you run a deploy, and the hub won't pick up a channel update until its slow periodic poll. `Deploy-Driver.ps1` handles the author's side end to end: it packages, assigns to your channel, and then forces your hub to install the new version immediately rather than waiting for the poll.
 
 ## Scenes and State
 
