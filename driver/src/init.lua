@@ -223,9 +223,9 @@ local function set_rail(device, component, height)
   -- state optimistically -- the delayed GET's REPORT is the single source of
   -- truth for what the UI shows, which keeps hub and cloud state in lockstep.
   if component == SHEER_COMPONENT then
-    device:set_field(FIELD_MIDDLE, height)
+    device:set_field(FIELD_MIDDLE, height, { persist = true })
   else
-    device:set_field(FIELD_BOTTOM, height)
+    device:set_field(FIELD_BOTTOM, height, { persist = true })
   end
   device.thread:call_with_delay(8, function()
     device:send_to_component(SwitchMultilevel:Get({}), component)
@@ -376,10 +376,10 @@ local function switch_multilevel_report(driver, device, cmd)
   local endpoint = cmd.src_channel or 0
 
   if endpoint == MIDDLE_EP then
-    device:set_field(FIELD_MIDDLE, height)
+    device:set_field(FIELD_MIDDLE, height, { persist = true })
     sync_sheer_child(device, height) -- the middle rail is shown only on the child "Sheer" device
   else
-    device:set_field(FIELD_BOTTOM, height)
+    device:set_field(FIELD_BOTTOM, height, { persist = true })
     emit_bottom(device, height)
   end
 end
@@ -400,6 +400,9 @@ local function device_init(self, device)
   device:set_endpoint_to_component_fn(endpoint_to_component)
   emit_favorite(device)
   ensure_sheer_child(self, device)
+  -- Re-query both rails so displayed state (incl. the child "Sheer" device) is
+  -- corrected after a driver reload, when the in-memory height fields are stale.
+  refresh_positions(device)
 end
 
 local function device_added(self, device)
