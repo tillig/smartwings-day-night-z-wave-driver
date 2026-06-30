@@ -55,6 +55,7 @@ arguments:
 | `Initialize-Driver.ps1` | First-time orchestrator: runs `New-Capabilities.ps1` then `Deploy-Driver.ps1`. |
 | `New-Capabilities.ps1` | Creates (or verifies) the custom capabilities and presentations. Warns if your account namespace differs from the one hardcoded in the driver. |
 | `Deploy-Driver.ps1` | Packages and assigns the driver for both first install and upgrades, then forces the hub to install the new version. Resolves the channel (explicit `-ChannelId`, cached, by `-ChannelName`, or `-CreateChannel`) and the hub (`-HubId` or cached); both are cached for argument-free re-runs. |
+| `Test-Shade.ps1` | Sanity-checks a shade (`-DeviceLabel` or `-DeviceId`): verifies it's on this driver with the right components, deletes the stock dummy child devices, resyncs displayed state (movement-free by default; `-Force` recalls the favorite for a reliable resync), and prints a health summary. Idempotent. Run it after pairing a new shade or switching its driver. |
 
 All scripts accept `-Verbose`. Run `Get-Help ./setup/<script>.ps1 -Detailed` for
 full parameter documentation.
