@@ -167,6 +167,22 @@ That is a SmartThings platform limitation — it shows the account GUID, not a h
 **Why is the sheer a separate device instead of a control on the main shade?**
 So it works by voice. See [Why the Sheer Is a Separate Device](#why-the-sheer-is-a-separate-device).
 
+**A shade is showing the wrong position and won't refresh.**
+See [Known Issues](#known-issues).
+
+## Known Issues
+
+**A shade (often the Sheer child) shows the wrong position — e.g. Sheer stuck at 0% when it's really 24%.**
+
+The driver shows only what the motor last *reported*, and these motors are "lazy": a plain refresh (a `SWITCH_MULTILEVEL GET`) usually gets **no reply** from the motor, so it can't correct a stale value. A stale value can appear after a driver reload, an interrupted move, or when the Sheer child first seeds itself from a default. Once the state is wrong, refreshing alone won't fix it.
+
+Only a *position command* (a `SET`) reliably forces the motor to send a fresh report. To resync:
+
+- Tap a **scene** or **favorite** button in the app, **or**
+- Run `./setup/Test-Shade.ps1 -DeviceLabel '<shade>' -Force` (the `-Force` recalls the saved favorite — a position command; it barely moves the shade if it's already there).
+
+Note: this is **not** the same as the spurious channel-0 report bug (fixed in commit `bed57cb`), which affects the *main/bottom* tile. The motors emit their real per-rail data multichannel-encapsulated on channels 1 (bottom) and 2 (middle); a stuck position is stale state, not a lost or misrouted report.
+
 ## History
 
 I bought three sets of the day/night shades with the Z-Wave motor. When I added them to SmartThings, each shade showed up as two devices: one that controlled the blinds incorrectly (treated as single-motor, no in-between positions), and one unrecognized "dummy" device that did nothing. SmartWings briefly had a custom driver on their site — listed as "under development" and "being tested" — but it disappeared. The shades were falling back to the default Z-Wave window treatments driver, which doesn't understand dual-motor shades. This driver is the fix.
