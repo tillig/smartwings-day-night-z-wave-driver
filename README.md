@@ -15,6 +15,7 @@ A SmartThings Edge driver (Lua, runs on the hub) for [SmartWings day/night cellu
   - [Option B — Manual Install](#option-b--manual-install)
   - [Custom Capabilities Caveat](#custom-capabilities-caveat)
 - [FAQ](#faq)
+- [Known Issues](#known-issues)
 - [History](#history)
 - [Reference](#reference)
 
@@ -52,6 +53,16 @@ Each shade shows up as **two devices**:
 | **Battery** | Battery level | — |
 
 **The sheer device** (e.g. "Family Room Shade Sheer") controls the sheer/middle rail as its own shade: open = full sheer, close = no sheer, or set a percentage. It lives as a separate device so it works by voice — see [Why the sheer is a separate device](#why-the-sheer-is-a-separate-device).
+
+Here's what the shade looks like in the SmartThings app:
+
+![Shade - screen 1 in SmartThings](./assets/shade-1.jpg)
+
+![Shade - screen 1 in SmartThings](./assets/shade-2.jpg)
+
+Here's what the sheer looks like in the SmartThings app:
+
+![Sheer screen in SmartThings](./assets/sheer-1.jpg)
 
 ### Scenes
 
