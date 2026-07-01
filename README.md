@@ -178,21 +178,21 @@ That is a SmartThings platform limitation — it shows the account GUID, not a h
 **Why is the sheer a separate device instead of a control on the main shade?**
 So it works by voice. See [Why the Sheer Is a Separate Device](#why-the-sheer-is-a-separate-device).
 
-**A shade is showing the wrong position and won't refresh.**
+**A shade is showing the wrong position.**
 See [Known Issues](#known-issues).
 
 ## Known Issues
 
 **A shade (often the Sheer child) shows the wrong position — e.g. Sheer stuck at 0% when it's really 24%.**
 
-The driver shows only what the motor last *reported*, and these motors are "lazy": a plain refresh (a `SWITCH_MULTILEVEL GET`) usually gets **no reply** from the motor, so it can't correct a stale value. A stale value can appear after a driver reload, an interrupted move, or when the Sheer child first seeds itself from a default. Once the state is wrong, refreshing alone won't fix it.
+The driver shows only what the motor last *reported*. Two things combine to produce a stuck position:
 
-Only a *position command* (a `SET`) reliably forces the motor to send a fresh report. To resync:
+1. **State goes stale.** After a driver reload, an interrupted move, or when the Sheer child first seeds itself, the driver's cached rail height can be wrong (e.g. it defaults `middle` to fully closed → Sheer 0%).
+2. **The self-healing refresh gets dropped.** On init the driver re-queries both rails with a `SWITCH_MULTILEVEL GET`. The motor *does* answer a GET without moving (confirmed live, and per §5.3 of the [programming guide](./assets/smartwings-z-wave-programming-guide.pdf): "Basic Get/Report maps to Multilevel Switch Get/Report") — but Z-Wave reports occasionally get dropped on the mesh. If that one report is lost, nothing retries and the stale value sticks.
 
-- Tap a **scene** or **favorite** button in the app, **or**
-- Run `./setup/Test-Shade.ps1 -DeviceLabel '<shade>' -Force` (the `-Force` recalls the saved favorite — a position command; it barely moves the shade if it's already there).
+**To fix it, just refresh again** — pull-to-refresh in the app, or run `./setup/Test-Shade.ps1 -DeviceLabel '<shade>'`. A movement-free GET is enough; repeat if the first one doesn't take. (`Test-Shade.ps1 -Force` recalls the saved favorite instead — a position command that also forces a report — but that's belt-and-suspenders, not required, and may nudge the motor.)
 
-Note: this is **not** the same as the spurious channel-0 report bug (fixed in commit `bed57cb`), which affects the *main/bottom* tile. The motors emit their real per-rail data multichannel-encapsulated on channels 1 (bottom) and 2 (middle); a stuck position is stale state, not a lost or misrouted report.
+Note: this is **not** the same as the spurious channel-0 report bug (fixed in commit `bed57cb`), which affects the *main/bottom* tile. The motors emit their real per-rail data multichannel-encapsulated on channels 1 (bottom) and 2 (middle); a stuck position is stale state plus a dropped report, not a lost or misrouted report path.
 
 ## History
 
