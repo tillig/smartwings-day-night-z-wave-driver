@@ -381,9 +381,18 @@ local function switch_multilevel_report(driver, device, cmd)
   if endpoint == MIDDLE_EP then
     device:set_field(FIELD_MIDDLE, height, { persist = true })
     sync_sheer_child(device, height) -- the middle rail is shown only on the child "Sheer" device
-  else
+  elseif endpoint == BOTTOM_EP then
     device:set_field(FIELD_BOTTOM, height, { persist = true })
     emit_bottom(device, height)
+  else
+    -- Some units (observed on one Family Room shade) emit a spurious,
+    -- un-encapsulated SWITCH_MULTILEVEL REPORT on channel 0 that duplicates the
+    -- MIDDLE rail's value. Without this guard that value lands on the bottom-rail
+    -- "main" tile and, because the per-channel reports race, can win the last
+    -- write -> "main" shows a phantom middle-rail percentage (e.g. 76%). The real
+    -- per-rail data always arrives multichannel-encapsulated on channel 1 or 2, so
+    -- ignore anything else.
+    log.debug(string.format("ignoring SWITCH_MULTILEVEL report on unexpected channel %s (value %d)", tostring(endpoint), height))
   end
 end
 
